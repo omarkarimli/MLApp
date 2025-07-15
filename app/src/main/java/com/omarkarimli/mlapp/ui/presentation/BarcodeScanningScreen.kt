@@ -19,6 +19,7 @@ import androidx.camera.core.Preview
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.camera.view.PreviewView
 import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -36,6 +37,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.rounded.Done
+import androidx.compose.material.icons.rounded.FlipCameraIos
 import androidx.compose.material.icons.rounded.Photo
 import androidx.compose.material3.BottomSheetDefaults
 import androidx.compose.material3.BottomSheetScaffold
@@ -189,6 +191,9 @@ fun BarcodeScanningScreen(navController: NavHostController) {
         }
     )
 
+    // State to hold the current camera selector (front or back)
+    var cameraSelector by remember { mutableStateOf(CameraSelector.DEFAULT_BACK_CAMERA) }
+
     Scaffold(
         topBar = {
             TopAppBar(
@@ -258,7 +263,20 @@ fun BarcodeScanningScreen(navController: NavHostController) {
                 BottomSheetDefaults.DragHandle()
             },
             sheetContent = {
-                BottomSheetContent(barcodeResults = barcodeResults, context = context)
+                BottomSheetContent(
+                    barcodeResults = barcodeResults,
+                    context = context,
+                    onFlipCamera = {
+                        // Toggle camera selector
+                        cameraSelector = if (cameraSelector == CameraSelector.DEFAULT_BACK_CAMERA) {
+                            Log.e("BarcodeScreen", "Switching to front camera")
+                            CameraSelector.DEFAULT_FRONT_CAMERA
+                        } else {
+                            Log.e("BarcodeScreen", "Switching to back camera")
+                            CameraSelector.DEFAULT_BACK_CAMERA
+                        }
+                    }
+                )
             },
             content = {
                 Column(
@@ -271,7 +289,7 @@ fun BarcodeScanningScreen(navController: NavHostController) {
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .weight(1f)
-                                .padding(Dimens.PaddingMedium)
+                                .padding(horizontal = Dimens.PaddingMedium)
                                 .background(Color.Black, RoundedCornerShape(Dimens.CornerRadiusMedium)),
                             onBarcodeDetected = { barcodes ->
                                 barcodes.forEach { newBarcode ->
@@ -284,7 +302,8 @@ fun BarcodeScanningScreen(navController: NavHostController) {
                                         sheetScaffoldState.bottomSheetState.partialExpand()
                                     }
                                 }
-                            }
+                            },
+                            cameraSelector = cameraSelector // Pass the current camera selector
                         )
                     } else {
                         CameraPermissionPlaceholder(
@@ -303,7 +322,8 @@ fun BarcodeScanningScreen(navController: NavHostController) {
 @Composable
 fun CameraPreview(
     modifier: Modifier = Modifier,
-    onBarcodeDetected: (List<Barcode>) -> Unit
+    onBarcodeDetected: (List<Barcode>) -> Unit,
+    cameraSelector: CameraSelector // Receive camera selector as a parameter
 ) {
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
@@ -311,11 +331,17 @@ fun CameraPreview(
     val cameraProviderFuture = remember { ProcessCameraProvider.getInstance(context) }
 
     AndroidView(
+        modifier = modifier,
         factory = { ctx ->
-            val previewView = PreviewView(ctx).apply {
+            PreviewView(ctx).apply {
                 this.scaleType = PreviewView.ScaleType.FILL_CENTER
             }
+        },
+        update = { previewView -> // This block runs on recomposition when cameraSelector changes
             val cameraProvider = cameraProviderFuture.get()
+
+            // Unbind all use cases before rebinding
+            cameraProvider.unbindAll()
 
             val preview = Preview.Builder()
                 .build()
@@ -333,19 +359,17 @@ fun CameraPreview(
                 }
 
             try {
-                cameraProvider.unbindAll()
                 cameraProvider.bindToLifecycle(
                     lifecycleOwner,
-                    CameraSelector.DEFAULT_BACK_CAMERA,
+                    cameraSelector, // Use the updated cameraSelector
                     preview,
                     imageAnalyzer
                 )
             } catch (exc: Exception) {
                 Log.e("BarcodeScanner", "Use case binding failed", exc)
+                Toast.makeText(context, "Error switching camera: ${exc.message}", Toast.LENGTH_SHORT).show()
             }
-            previewView
-        },
-        modifier = modifier
+        }
     )
 
     DisposableEffect(Unit) {
@@ -357,21 +381,33 @@ fun CameraPreview(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun BottomSheetContent(barcodeResults: List<ScannedBarcode>, context: Context) {
+fun BottomSheetContent(barcodeResults: List<ScannedBarcode>, context: Context, onFlipCamera: () -> Unit) {
     Column(
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = Dimens.PaddingMedium),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Text(
-            text = "Detected Barcodes",
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(bottom = Dimens.PaddingSmall),
-            textAlign = TextAlign.Start,
-            style = MaterialTheme.typography.titleLarge
-        )
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Text(
+                text = "Detected Barcodes",
+                modifier = Modifier.padding(bottom = Dimens.PaddingSmall),
+                textAlign = TextAlign.Start,
+                style = MaterialTheme.typography.titleLarge,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+            IconButton(
+                onClick = onFlipCamera, // Call the onFlipCamera lambda
+                modifier = Modifier.size(Dimens.IconSizeLarge)
+            ) {
+                Icon(Icons.Rounded.FlipCameraIos, contentDescription = "Flip Camera")
+            }
+        }
 
         if (barcodeResults.isEmpty()) {
             Text(

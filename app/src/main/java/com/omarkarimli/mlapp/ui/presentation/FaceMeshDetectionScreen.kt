@@ -19,6 +19,7 @@ import androidx.camera.core.Preview
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.camera.view.PreviewView
 import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -36,6 +37,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.rounded.Done
+import androidx.compose.material.icons.rounded.FlipCameraIos
 import androidx.compose.material.icons.rounded.Photo
 import androidx.compose.material3.BottomSheetDefaults
 import androidx.compose.material3.BottomSheetScaffold
@@ -196,6 +198,9 @@ fun FaceMeshDetectionScreen(navController: NavHostController) {
         }
     )
 
+    // State to hold the current camera selector (front or back)
+    var cameraSelector by remember { mutableStateOf(CameraSelector.DEFAULT_BACK_CAMERA) }
+
     Scaffold(
         topBar = {
             TopAppBar(
@@ -274,7 +279,20 @@ fun FaceMeshDetectionScreen(navController: NavHostController) {
                 BottomSheetDefaults.DragHandle()
             },
             sheetContent = {
-                BottomSheetContentFaceMeshes(faceMeshResults = faceMeshResults, context = context)
+                BottomSheetContentFaceMeshes(
+                    faceMeshResults = faceMeshResults, 
+                    context = context,
+                    onFlipCamera = {
+                        // Toggle camera selector
+                        cameraSelector = if (cameraSelector == CameraSelector.DEFAULT_BACK_CAMERA) {
+                            Log.e("BarcodeScreen", "Switching to front camera")
+                            CameraSelector.DEFAULT_FRONT_CAMERA
+                        } else {
+                            Log.e("BarcodeScreen", "Switching to back camera")
+                            CameraSelector.DEFAULT_BACK_CAMERA
+                        }
+                    }
+                )
             },
             content = {
                 Column(
@@ -287,8 +305,9 @@ fun FaceMeshDetectionScreen(navController: NavHostController) {
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .weight(1f)
-                                .padding(Dimens.PaddingMedium)
+                                .padding(horizontal = Dimens.PaddingMedium)
                                 .background(Color.Black, RoundedCornerShape(Dimens.CornerRadiusMedium)),
+                            cameraSelector = cameraSelector,
                             onFaceMeshesDetected = { faceMeshes ->
                                 // Filter out live scan results, then add new ones
                                 val currentLiveFaceMeshes = faceMeshResults.filter { it.imageUri == null }.map { it.faceMesh.boundingBox }.toSet()
@@ -334,7 +353,8 @@ fun FaceMeshDetectionScreen(navController: NavHostController) {
 @Composable
 fun CameraPreviewFaceMeshDetection(
     modifier: Modifier = Modifier,
-    onFaceMeshesDetected: (List<FaceMesh>) -> Unit
+    onFaceMeshesDetected: (List<FaceMesh>) -> Unit,
+    cameraSelector: CameraSelector // Receive camera selector as a parameter
 ) {
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
@@ -342,6 +362,7 @@ fun CameraPreviewFaceMeshDetection(
     val cameraProviderFuture = remember { ProcessCameraProvider.getInstance(context) }
 
     AndroidView(
+        modifier = modifier,
         factory = { ctx ->
             val previewView = PreviewView(ctx).apply {
                 this.scaleType = PreviewView.ScaleType.FILL_CENTER
@@ -380,7 +401,39 @@ fun CameraPreviewFaceMeshDetection(
 
             previewView
         },
-        modifier = modifier
+        update = { previewView -> // This block runs on recomposition when cameraSelector changes
+            val cameraProvider = cameraProviderFuture.get()
+
+            // Unbind all use cases before rebinding
+            cameraProvider.unbindAll()
+
+            val preview = Preview.Builder()
+                .build()
+                .also {
+                    it.surfaceProvider = previewView.surfaceProvider
+                }
+
+            val imageAnalyzer = ImageAnalysis.Builder()
+                .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
+                .build()
+                .also {
+                    it.setAnalyzer(cameraExecutor, FaceMeshDetectorAnalyzer { faceMeshes ->
+                        onFaceMeshesDetected(faceMeshes)
+                    })
+                }
+
+            try {
+                cameraProvider.bindToLifecycle(
+                    lifecycleOwner,
+                    cameraSelector, // Use the updated cameraSelector
+                    preview,
+                    imageAnalyzer
+                )
+            } catch (exc: Exception) {
+                Log.e("BarcodeScanner", "Use case binding failed", exc)
+                Toast.makeText(context, "Error switching camera: ${exc.message}", Toast.LENGTH_SHORT).show()
+            }
+        }
     )
 
     DisposableEffect(Unit) {
@@ -392,7 +445,7 @@ fun CameraPreviewFaceMeshDetection(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun BottomSheetContentFaceMeshes(faceMeshResults: List<ScannedFaceMesh>, context: Context) {
+fun BottomSheetContentFaceMeshes(faceMeshResults: List<ScannedFaceMesh>, context: Context, onFlipCamera: () -> Unit) {
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -400,14 +453,26 @@ fun BottomSheetContentFaceMeshes(faceMeshResults: List<ScannedFaceMesh>, context
             .background(MaterialTheme.colorScheme.background), // Ensure background for drag handle visibility
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Text(
-            text = "Detected Face Meshes",
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(top = Dimens.PaddingSmall, bottom = Dimens.PaddingSmall), // Added top padding for better spacing
-            textAlign = TextAlign.Start,
-            style = MaterialTheme.typography.titleLarge
-        )
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Text(
+                text = "Detected Face Meshes",
+                modifier = Modifier.padding(bottom = Dimens.PaddingSmall),
+                textAlign = TextAlign.Start,
+                style = MaterialTheme.typography.titleLarge,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+            IconButton(
+                onClick = onFlipCamera,
+                modifier = Modifier.size(Dimens.IconSizeLarge)
+            ) {
+                Icon(Icons.Rounded.FlipCameraIos, contentDescription = "Flip Camera")
+            }
+        }
 
         if (faceMeshResults.isEmpty()) {
             Text(

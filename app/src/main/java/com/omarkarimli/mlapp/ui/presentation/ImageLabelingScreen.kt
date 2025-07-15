@@ -290,7 +290,7 @@ fun ImageLabelingScreen(navController: NavHostController) {
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .weight(1f)
-                                .padding(Dimens.PaddingMedium)
+                                .padding(horizontal = Dimens.PaddingMedium)
                                 .background(Color.Black, RoundedCornerShape(Dimens.CornerRadiusMedium)),
                             onLabelsDetected = { labels ->
                                 // Filter out live scan results, then add new ones
