@@ -87,7 +87,8 @@ fun HomeScreen(navController: NavHostController) {
             Icons.Rounded.Face,
             "Face Mesh Detection",
             "Detect face mesh info on close-range images.",
-            Icons.AutoMirrored.Rounded.ArrowForward
+            Icons.AutoMirrored.Rounded.ArrowForward,
+            onClick = { navController.navigate(Screen.FaceMeshDetection.route) }
         ),
         ListItemModel(
             "3",

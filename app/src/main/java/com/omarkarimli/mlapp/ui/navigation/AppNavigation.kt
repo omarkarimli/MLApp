@@ -148,6 +148,10 @@ fun AppNavigation() {
             composable(Screen.ObjectDetection.route) {
                 ObjectDetectionScreen(navController = navController)
             }
+            // Composable for the Face Mesh Detection screen
+            composable(Screen.FaceMeshDetection.route) {
+                com.omarkarimli.mlapp.ui.presentation.FaceMeshDetectionScreen(navController = navController)
+            }
         }
     }
 }
@@ -163,4 +167,5 @@ sealed class Screen(val route: String, val title: String) {
     data object ImageLabeling: Screen("image_labeling", "Image Labeling")
     data object TextRecognition: Screen("text_recognition", "Text Recognition")
     data object ObjectDetection: Screen("object_detection", "Object Detection")
+    data object FaceMeshDetection: Screen("face_mesh_detection", "Face Mesh Detection")
 }

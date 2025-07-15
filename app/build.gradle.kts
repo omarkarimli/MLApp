@@ -85,6 +85,9 @@ dependencies {
     // Object Detection
     implementation("com.google.mlkit:object-detection:17.0.2")
 
+    // Face Mesh Detection
+    implementation("com.google.mlkit:face-mesh-detection:16.0.0-beta3")
+
     // Text Recognition
     // Latin
     implementation("com.google.mlkit:text-recognition:16.0.1")

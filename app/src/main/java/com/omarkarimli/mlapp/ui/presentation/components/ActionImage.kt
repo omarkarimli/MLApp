@@ -132,8 +132,7 @@ fun FullscreenImageViewer(
                 contentDescription = "Fullscreen Image",
                 contentScale = ContentScale.Fit, // Use Fit to show the whole image
                 modifier = Modifier
-                    .fillMaxSize() // Fills the dialog's content area
-                    .padding(Dimens.PaddingSmall) // Optional padding around the image
+                    .fillMaxSize()
             )
         } ?: run {
             // Placeholder for error loading fullscreen image
