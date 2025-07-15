@@ -291,6 +291,7 @@ fun BarcodeScanningScreen(navController: NavHostController) {
                                 .weight(1f)
                                 .padding(horizontal = Dimens.PaddingMedium)
                                 .background(Color.Black, RoundedCornerShape(Dimens.CornerRadiusMedium)),
+                            cameraSelector = cameraSelector,
                             onBarcodeDetected = { barcodes ->
                                 barcodes.forEach { newBarcode ->
                                     if (barcodeResults.none { it.barcode.rawValue == newBarcode.rawValue }) {
@@ -302,8 +303,7 @@ fun BarcodeScanningScreen(navController: NavHostController) {
                                         sheetScaffoldState.bottomSheetState.partialExpand()
                                     }
                                 }
-                            },
-                            cameraSelector = cameraSelector // Pass the current camera selector
+                            }
                         )
                     } else {
                         CameraPermissionPlaceholder(
@@ -323,7 +323,7 @@ fun BarcodeScanningScreen(navController: NavHostController) {
 fun CameraPreview(
     modifier: Modifier = Modifier,
     onBarcodeDetected: (List<Barcode>) -> Unit,
-    cameraSelector: CameraSelector // Receive camera selector as a parameter
+    cameraSelector: CameraSelector
 ) {
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current

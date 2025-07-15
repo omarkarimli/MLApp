@@ -19,6 +19,7 @@ import androidx.camera.core.Preview
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.camera.view.PreviewView
 import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -36,6 +37,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.rounded.Done
+import androidx.compose.material.icons.rounded.FlipCameraIos
 import androidx.compose.material.icons.rounded.Photo
 import androidx.compose.material3.BottomSheetDefaults
 import androidx.compose.material3.BottomSheetScaffold
@@ -75,7 +77,6 @@ import androidx.navigation.NavHostController
 import com.google.mlkit.vision.common.InputImage
 import com.google.mlkit.vision.objects.DetectedObject
 import com.google.mlkit.vision.objects.ObjectDetection
-import com.google.mlkit.vision.objects.ObjectDetectorOptionsBase
 import com.google.mlkit.vision.objects.defaults.ObjectDetectorOptions
 import com.omarkarimli.mlapp.ui.navigation.Screen
 import com.omarkarimli.mlapp.ui.presentation.components.ActionImage
@@ -199,6 +200,9 @@ fun ObjectDetectionScreen(navController: NavHostController) {
         }
     )
 
+    // State to hold the current camera selector (front or back)
+    var cameraSelector by remember { mutableStateOf(CameraSelector.DEFAULT_BACK_CAMERA) }
+
     Scaffold(
         topBar = {
             TopAppBar(
@@ -277,7 +281,20 @@ fun ObjectDetectionScreen(navController: NavHostController) {
                 BottomSheetDefaults.DragHandle()
             },
             sheetContent = {
-                BottomSheetContentObjects(objectResults = objectResults, context = context)
+                BottomSheetContentObjects(
+                    objectResults = objectResults,
+                    context = context,
+                    onFlipCamera = {
+                        // Toggle camera selector
+                        cameraSelector = if (cameraSelector == CameraSelector.DEFAULT_BACK_CAMERA) {
+                            Log.e("BarcodeScreen", "Switching to front camera")
+                            CameraSelector.DEFAULT_FRONT_CAMERA
+                        } else {
+                            Log.e("BarcodeScreen", "Switching to back camera")
+                            CameraSelector.DEFAULT_BACK_CAMERA
+                        }
+                    }
+                )
             },
             content = {
                 Column(
@@ -292,6 +309,7 @@ fun ObjectDetectionScreen(navController: NavHostController) {
                                 .weight(1f)
                                 .padding(horizontal = Dimens.PaddingMedium)
                                 .background(Color.Black, RoundedCornerShape(Dimens.CornerRadiusMedium)),
+                            cameraSelector = cameraSelector,
                             onObjectsDetected = { objects ->
                                 // Filter out live scan results, then add new ones
                                 val currentLiveObjects = objectResults.filter { it.imageUri == null }.map { it.detectedObject.labels.firstOrNull()?.text to it.detectedObject.boundingBox }.toSet()
@@ -338,7 +356,8 @@ fun ObjectDetectionScreen(navController: NavHostController) {
 @Composable
 fun CameraPreviewObjectDetection(
     modifier: Modifier = Modifier,
-    onObjectsDetected: (List<DetectedObject>) -> Unit
+    onObjectsDetected: (List<DetectedObject>) -> Unit,
+    cameraSelector: CameraSelector
 ) {
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
@@ -346,6 +365,7 @@ fun CameraPreviewObjectDetection(
     val cameraProviderFuture = remember { ProcessCameraProvider.getInstance(context) }
 
     AndroidView(
+        modifier = modifier,
         factory = { ctx ->
             val previewView = PreviewView(ctx).apply {
                 this.scaleType = PreviewView.ScaleType.FILL_CENTER
@@ -384,7 +404,39 @@ fun CameraPreviewObjectDetection(
 
             previewView
         },
-        modifier = modifier
+        update = { previewView -> // This block runs on recomposition when cameraSelector changes
+            val cameraProvider = cameraProviderFuture.get()
+
+            // Unbind all use cases before rebinding
+            cameraProvider.unbindAll()
+
+            val preview = Preview.Builder()
+                .build()
+                .also {
+                    it.surfaceProvider = previewView.surfaceProvider
+                }
+
+            val imageAnalyzer = ImageAnalysis.Builder()
+                .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
+                .build()
+                .also {
+                    it.setAnalyzer(cameraExecutor, ObjectDetectorAnalyzer { detectedObjects ->
+                        onObjectsDetected(detectedObjects)
+                    })
+                }
+
+            try {
+                cameraProvider.bindToLifecycle(
+                    lifecycleOwner,
+                    cameraSelector, // Use the updated cameraSelector
+                    preview,
+                    imageAnalyzer
+                )
+            } catch (exc: Exception) {
+                Log.e("BarcodeScanner", "Use case binding failed", exc)
+                Toast.makeText(context, "Error switching camera: ${exc.message}", Toast.LENGTH_SHORT).show()
+            }
+        }
     )
 
     DisposableEffect(Unit) {
@@ -396,7 +448,7 @@ fun CameraPreviewObjectDetection(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun BottomSheetContentObjects(objectResults: List<ScannedObject>, context: Context) {
+fun BottomSheetContentObjects(objectResults: List<ScannedObject>, context: Context, onFlipCamera: () -> Unit) {
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -404,14 +456,26 @@ fun BottomSheetContentObjects(objectResults: List<ScannedObject>, context: Conte
             .background(MaterialTheme.colorScheme.background), // Ensure background for drag handle visibility
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Text(
-            text = "Detected Objects",
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(top = Dimens.PaddingSmall, bottom = Dimens.PaddingSmall), // Added top padding for better spacing
-            textAlign = TextAlign.Start,
-            style = MaterialTheme.typography.titleLarge
-        )
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Text(
+                text = "Detected Objects",
+                modifier = Modifier.padding(bottom = Dimens.PaddingSmall),
+                textAlign = TextAlign.Start,
+                style = MaterialTheme.typography.titleLarge,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+            IconButton(
+                onClick = onFlipCamera, // Call the onFlipCamera lambda
+                modifier = Modifier.size(Dimens.IconSizeLarge)
+            ) {
+                Icon(Icons.Rounded.FlipCameraIos, contentDescription = "Flip Camera")
+            }
+        }
 
         if (objectResults.isEmpty()) {
             Text(

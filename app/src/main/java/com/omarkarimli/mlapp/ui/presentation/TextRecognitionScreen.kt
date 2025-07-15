@@ -19,6 +19,7 @@ import androidx.camera.core.Preview
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.camera.view.PreviewView
 import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -36,6 +37,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.rounded.Done
+import androidx.compose.material.icons.rounded.FlipCameraIos
 import androidx.compose.material.icons.rounded.Photo
 import androidx.compose.material3.BottomSheetDefaults
 import androidx.compose.material3.BottomSheetScaffold
@@ -188,6 +190,9 @@ fun TextRecognitionScreen(navController: NavHostController) {
         }
     )
 
+    // State to hold the current camera selector (front or back)
+    var cameraSelector by remember { mutableStateOf(CameraSelector.DEFAULT_BACK_CAMERA) }
+
     Scaffold(
         topBar = {
             TopAppBar(
@@ -257,7 +262,20 @@ fun TextRecognitionScreen(navController: NavHostController) {
                 BottomSheetDefaults.DragHandle()
             },
             sheetContent = {
-                TextRecognitionBottomSheetContent(textResults = textResults, context = context)
+                TextRecognitionBottomSheetContent(
+                    textResults = textResults,
+                    context = context,
+                    onFlipCamera = {
+                        // Toggle camera selector
+                        cameraSelector = if (cameraSelector == CameraSelector.DEFAULT_BACK_CAMERA) {
+                            Log.e("BarcodeScreen", "Switching to front camera")
+                            CameraSelector.DEFAULT_FRONT_CAMERA
+                        } else {
+                            Log.e("BarcodeScreen", "Switching to back camera")
+                            CameraSelector.DEFAULT_BACK_CAMERA
+                        }
+                    }
+                )
             },
             content = {
                 Column(
@@ -272,6 +290,7 @@ fun TextRecognitionScreen(navController: NavHostController) {
                                 .weight(1f)
                                 .padding(horizontal = Dimens.PaddingMedium)
                                 .background(Color.Black, RoundedCornerShape(Dimens.CornerRadiusMedium)),
+                            cameraSelector = cameraSelector, // Pass the current camera selector
                             onTextDetected = { recognizedText ->
                                 if (recognizedText.isNotEmpty()) {
                                     if (textResults.none { it.text == recognizedText }) {
@@ -302,7 +321,8 @@ fun TextRecognitionScreen(navController: NavHostController) {
 @Composable
 fun CameraPreviewTextRecognition(
     modifier: Modifier = Modifier,
-    onTextDetected: (String) -> Unit
+    onTextDetected: (String) -> Unit,
+    cameraSelector: CameraSelector // Receive camera selector as a parameter
 ) {
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
@@ -310,6 +330,7 @@ fun CameraPreviewTextRecognition(
     val cameraProviderFuture = remember { ProcessCameraProvider.getInstance(context) }
 
     AndroidView(
+        modifier = modifier,
         factory = { ctx ->
             val previewView = PreviewView(ctx).apply {
                 this.scaleType = PreviewView.ScaleType.FILL_CENTER
@@ -344,7 +365,39 @@ fun CameraPreviewTextRecognition(
             }
             previewView
         },
-        modifier = modifier
+        update = { previewView -> // This block runs on recomposition when cameraSelector changes
+            val cameraProvider = cameraProviderFuture.get()
+
+            // Unbind all use cases before rebinding
+            cameraProvider.unbindAll()
+
+            val preview = Preview.Builder()
+                .build()
+                .also {
+                    it.surfaceProvider = previewView.surfaceProvider
+                }
+
+            val imageAnalyzer = ImageAnalysis.Builder()
+                .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
+                .build()
+                .also {
+                    it.setAnalyzer(cameraExecutor, TextAnalyzer { detectedTexts ->
+                        onTextDetected(detectedTexts)
+                    })
+                }
+
+            try {
+                cameraProvider.bindToLifecycle(
+                    lifecycleOwner,
+                    cameraSelector, // Use the updated cameraSelector
+                    preview,
+                    imageAnalyzer
+                )
+            } catch (exc: Exception) {
+                Log.e("BarcodeScanner", "Use case binding failed", exc)
+                Toast.makeText(context, "Error switching camera: ${exc.message}", Toast.LENGTH_SHORT).show()
+            }
+        }
     )
 
     DisposableEffect(Unit) {
@@ -356,21 +409,33 @@ fun CameraPreviewTextRecognition(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun TextRecognitionBottomSheetContent(textResults: List<RecognizedText>, context: Context) {
+fun TextRecognitionBottomSheetContent(textResults: List<RecognizedText>, context: Context, onFlipCamera: () -> Unit) {
     Column(
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = Dimens.PaddingMedium),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Text(
-            text = "Recognized Text",
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(bottom = Dimens.PaddingSmall),
-            textAlign = TextAlign.Start,
-            style = MaterialTheme.typography.titleLarge
-        )
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Text(
+                text = "Recognized Text",
+                modifier = Modifier.padding(bottom = Dimens.PaddingSmall),
+                textAlign = TextAlign.Start,
+                style = MaterialTheme.typography.titleLarge,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+            IconButton(
+                onClick = onFlipCamera, // Call the onFlipCamera lambda
+                modifier = Modifier.size(Dimens.IconSizeLarge)
+            ) {
+                Icon(Icons.Rounded.FlipCameraIos, contentDescription = "Flip Camera")
+            }
+        }
 
         if (textResults.isEmpty()) {
             Text(
