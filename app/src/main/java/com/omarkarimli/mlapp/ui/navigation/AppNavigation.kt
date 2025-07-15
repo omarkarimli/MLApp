@@ -20,6 +20,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.omarkarimli.mlapp.ui.presentation.BarcodeScanningScreen
+import com.omarkarimli.mlapp.ui.presentation.FaceMeshDetectionScreen
 import com.omarkarimli.mycollab.ui.presentation.BookmarkScreen
 import com.omarkarimli.mlapp.ui.presentation.HomeScreen
 import com.omarkarimli.mlapp.ui.presentation.ImageLabelingScreen
@@ -150,7 +151,7 @@ fun AppNavigation() {
             }
             // Composable for the Face Mesh Detection screen
             composable(Screen.FaceMeshDetection.route) {
-                com.omarkarimli.mlapp.ui.presentation.FaceMeshDetectionScreen(navController = navController)
+                FaceMeshDetectionScreen(navController = navController)
             }
         }
     }
