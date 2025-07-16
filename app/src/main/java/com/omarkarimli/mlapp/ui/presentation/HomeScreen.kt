@@ -1,5 +1,9 @@
 package com.omarkarimli.mlapp.ui.presentation
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.expandHorizontally
+import androidx.compose.animation.shrinkHorizontally
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -54,6 +58,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.isTraversalGroup
 import androidx.compose.ui.semantics.semantics
@@ -138,18 +143,35 @@ private fun MyTopAppBar(scrollBehavior: TopAppBarScrollBehavior, items: List<Lis
             titleContentColor = MaterialTheme.colorScheme.onSurface,
         ),
         title = {
-            Text(
-                stringResource(R.string.app_name),
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-                style = if (isTopAppBarMinimized) MaterialTheme.typography.headlineSmall else MaterialTheme.typography.headlineMedium,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onSurface
-            )
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(Dimens.PaddingSmall)
+            ) {
+                AnimatedVisibility(
+                    visible = !isTopAppBarMinimized,
+                    enter = expandHorizontally(),
+                    exit = shrinkHorizontally()
+                ) {
+                    Spacer(Modifier.size(Dimens.PaddingSmall))
+                    Image(
+                        painter = painterResource(R.drawable.app_icon),
+                        contentDescription = "App Icon",
+                        modifier = Modifier.size(Dimens.IconSizeExtraLarge)
+                    )
+                }
+                Text(
+                    stringResource(R.string.app_name),
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    style = if (isTopAppBarMinimized) MaterialTheme.typography.headlineSmall else MaterialTheme.typography.headlineMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+            }
         },
         navigationIcon = {
             Row {
-                Spacer(Modifier.size(Dimens.PaddingSmall)) // Changed from 8.dp
+                Spacer(Modifier.size(Dimens.PaddingSmall))
                 FilledIconButton(
                     onClick = { expanded = !expanded },
                     modifier = Modifier.size(Dimens.IconSizeLarge), // Changed from 32.dp
@@ -165,6 +187,7 @@ private fun MyTopAppBar(scrollBehavior: TopAppBarScrollBehavior, items: List<Lis
                         modifier = Modifier.size(Dimens.IconSizeMedium) // Changed from 24.dp
                     )
                 }
+                Spacer(Modifier.size(Dimens.PaddingSmall))
             }
 
             DropdownMenu(
@@ -231,7 +254,7 @@ private fun ScrollContent(
     Column(
         modifier = Modifier
             .padding(
-                top = innerPadding.calculateTopPadding() - Dimens.PaddingLarge, // Adjusted to use Dimens.PaddingLarge
+                top = innerPadding.calculateTopPadding() - Dimens.PaddingMedium, // Adjusted to use Dimens.PaddingLarge
                 bottom = innerPadding.calculateBottomPadding()
             ) // Apply innerPadding to the whole column
             .fillMaxWidth()
@@ -261,32 +284,21 @@ private fun ScrollContent(
         }
 
         Spacer(modifier = Modifier.height(Dimens.PaddingLarge)) // Changed from 24.dp
-        RecentCollabs()
+        Recent()
     }
 }
 
 @Composable
-private fun RecentCollabs() {
+private fun Recent() {
     Column(
         modifier = Modifier.fillMaxWidth().padding(horizontal = Dimens.PaddingLarge), // Changed from 24.dp
     ) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Text(
-                text = "Recent Collabs",
-                style = MaterialTheme.typography.headlineSmall,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onSurface
-            )
-            Spacer(modifier = Modifier.weight(1f))
-            Text(
-                text = "See All",
-                style = MaterialTheme.typography.labelLarge,
-                color = MaterialTheme.colorScheme.primary
-            )
-        }
+        Text(
+            text = "Recent",
+            style = MaterialTheme.typography.headlineSmall,
+            fontWeight = FontWeight.Bold,
+            color = MaterialTheme.colorScheme.onSurface
+        )
         Spacer(modifier = Modifier.height(Dimens.PaddingSmall)) // Changed from 8.dp
         Text(
             text = "No item found",
