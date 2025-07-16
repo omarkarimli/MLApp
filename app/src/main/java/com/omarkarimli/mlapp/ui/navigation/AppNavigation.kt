@@ -5,6 +5,9 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Bookmark
 import androidx.compose.material.icons.rounded.Home
 import androidx.compose.material.icons.rounded.Settings
+import androidx.compose.material.icons.outlined.BookmarkBorder
+import androidx.compose.material.icons.outlined.Home
+import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
@@ -34,13 +37,14 @@ import com.omarkarimli.mlapp.ui.presentation.TextRecognitionScreen
 // Define a sealed class for bottom navigation destinations
 sealed class BottomBarDestination(
     val route: String,
-    val icon: ImageVector,
+    val selectedIcon: ImageVector, // Icon when selected (rounded)
+    val unselectedIcon: ImageVector, // Icon when not selected (outlined)
     val label: String,
     val contentDescription: String
 ) {
-    data object Home : BottomBarDestination("home", Icons.Rounded.Home, "Home", "Home Screen")
-    data object Bookmarks : BottomBarDestination("bookmarks", Icons.Rounded.Bookmark, "Bookmarks", "Bookmarks Screen")
-    data object Settings : BottomBarDestination("settings", Icons.Rounded.Settings, "Settings", "Settings Screen")
+    data object Home : BottomBarDestination("home", Icons.Rounded.Home, Icons.Outlined.Home, "Home", "Home Screen")
+    data object Bookmarks : BottomBarDestination("bookmarks", Icons.Rounded.Bookmark, Icons.Outlined.BookmarkBorder, "Bookmarks", "Bookmarks Screen")
+    data object Settings : BottomBarDestination("settings", Icons.Rounded.Settings, Icons.Outlined.Settings, "Settings", "Settings Screen")
 }
 
 val bottomBarDestinations = listOf(
@@ -90,7 +94,7 @@ fun AppNavigation() {
                             },
                             icon = {
                                 Icon(
-                                    imageVector = destination.icon,
+                                    imageVector = if (isSelected) destination.selectedIcon else destination.unselectedIcon,
                                     contentDescription = destination.contentDescription
                                 )
                             },
