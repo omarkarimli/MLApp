@@ -71,7 +71,7 @@ private fun ScrollContent(
     val onboardingPages = listOf(
         OnboardingPageData(R.drawable.onboarding_image_1, "Welcome to MyCollab!", "Share and collaborate with friends and family."),
         OnboardingPageData(R.drawable.onboarding_image_2, "Collaborate with ease.", "Easily share, collab with friends & family."),
-         OnboardingPageData(R.drawable.onboarding_image_3, "Stay organized.", "Use AI to detect contents, workflows.")
+        OnboardingPageData(R.drawable.onboarding_image_3, "Stay organized.", "Use AI to detect contents, workflows.")
     )
 
     val pagerState = rememberPagerState(pageCount = {
