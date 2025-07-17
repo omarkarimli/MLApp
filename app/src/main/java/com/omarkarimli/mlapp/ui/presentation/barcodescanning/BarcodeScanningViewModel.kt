@@ -1,4 +1,4 @@
-package com.omarkarimli.mlapp.ui.presentation
+package com.omarkarimli.mlapp.ui.presentation.barcodescanning
 
 import android.Manifest
 import android.content.Context
@@ -9,7 +9,9 @@ import android.os.Build
 import android.provider.MediaStore
 import android.util.Log
 import android.widget.Toast
+import androidx.annotation.OptIn
 import androidx.camera.core.CameraSelector
+import androidx.camera.core.ExperimentalGetImage
 import androidx.camera.core.ImageAnalysis
 import androidx.camera.core.ImageProxy
 import androidx.core.content.ContextCompat
@@ -148,7 +150,7 @@ class BarcodeAnalyzer(private val listener: (List<Barcode>) -> Unit) : ImageAnal
     private val options = BarcodeScannerOptions.Builder().setBarcodeFormats(Barcode.FORMAT_ALL_FORMATS).build()
     private val scanner = BarcodeScanning.getClient(options)
 
-    @androidx.annotation.OptIn(androidx.camera.core.ExperimentalGetImage::class)
+    @OptIn(ExperimentalGetImage::class)
     override fun analyze(imageProxy: ImageProxy) {
         val mediaImage = imageProxy.image
         if (mediaImage != null) {

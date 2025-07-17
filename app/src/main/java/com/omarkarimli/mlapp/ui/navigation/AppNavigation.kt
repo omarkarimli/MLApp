@@ -22,7 +22,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
-import com.omarkarimli.mlapp.ui.presentation.BarcodeScanningScreen
+import com.omarkarimli.mlapp.ui.presentation.barcodescanning.BarcodeScanningScreen
 import com.omarkarimli.mlapp.ui.presentation.FaceMeshDetectionScreen
 import com.omarkarimli.mycollab.ui.presentation.BookmarkScreen
 import com.omarkarimli.mlapp.ui.presentation.HomeScreen

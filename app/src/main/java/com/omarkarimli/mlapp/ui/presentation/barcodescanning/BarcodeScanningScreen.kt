@@ -1,4 +1,4 @@
-package com.omarkarimli.mlapp.ui.presentation
+package com.omarkarimli.mlapp.ui.presentation.barcodescanning
 
 import android.Manifest
 import android.content.Context
@@ -199,7 +199,8 @@ fun CameraPreview(modifier: Modifier = Modifier, onBarcodeDetected: (List<Barcod
             cameraProvider.unbindAll()
             val preview = Preview.Builder().build().also { it.surfaceProvider = previewView.surfaceProvider }
             val imageAnalyzer = ImageAnalysis.Builder().setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST).build().also {
-                it.setAnalyzer(cameraExecutor, BarcodeAnalyzer { barcodes -> onBarcodeDetected(barcodes) })
+                it.setAnalyzer(cameraExecutor,
+                    BarcodeAnalyzer { barcodes -> onBarcodeDetected(barcodes) })
             }
             try {
                 cameraProvider.bindToLifecycle(lifecycleOwner, cameraSelector, preview, imageAnalyzer)
