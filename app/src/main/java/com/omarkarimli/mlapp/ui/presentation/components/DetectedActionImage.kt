@@ -35,7 +35,7 @@ import androidx.compose.ui.window.DialogProperties
 import com.omarkarimli.mlapp.utils.Dimens
 
 @Composable
-fun ActionImage(context: Context, imageUri: Uri?) {
+fun DetectedActionImage(context: Context, imageUri: Uri?) {
     var showFullscreenImage by remember { mutableStateOf(false) }
 
     imageUri?.let { uri ->

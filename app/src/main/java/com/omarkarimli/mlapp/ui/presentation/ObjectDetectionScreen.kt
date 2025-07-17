@@ -79,7 +79,7 @@ import com.google.mlkit.vision.objects.DetectedObject
 import com.google.mlkit.vision.objects.ObjectDetection
 import com.google.mlkit.vision.objects.defaults.ObjectDetectorOptions
 import com.omarkarimli.mlapp.ui.navigation.Screen
-import com.omarkarimli.mlapp.ui.presentation.components.ActionImage
+import com.omarkarimli.mlapp.ui.presentation.components.DetectedActionImage
 import com.omarkarimli.mlapp.ui.presentation.components.CameraPermissionPlaceholder
 import com.omarkarimli.mlapp.ui.theme.MLAppTheme
 import com.omarkarimli.mlapp.utils.Dimens
@@ -622,7 +622,7 @@ fun ObjectResultCard(scannedObject: ScannedObject, context: Context) {
             }
         }
 
-        ActionImage(context, imageUri)
+        DetectedActionImage(context, imageUri)
     }
 }
 

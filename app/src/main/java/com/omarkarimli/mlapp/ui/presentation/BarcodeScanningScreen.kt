@@ -2,18 +2,13 @@ package com.omarkarimli.mlapp.ui.presentation
 
 import android.Manifest
 import android.content.Context
-import android.content.pm.PackageManager
-import android.graphics.ImageDecoder
-import android.net.Uri
 import android.os.Build
-import android.provider.MediaStore
 import android.util.Log
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.camera.core.CameraSelector
 import androidx.camera.core.ImageAnalysis
-import androidx.camera.core.ImageProxy
 import androidx.camera.core.Preview
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.camera.view.PreviewView
@@ -36,24 +31,17 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.viewinterop.AndroidView
-import androidx.core.content.ContextCompat
 import androidx.lifecycle.compose.LocalLifecycleOwner
+import androidx.lifecycle.viewmodel.compose.viewModel // Import viewModel
 import androidx.navigation.NavHostController
-import com.google.mlkit.vision.barcode.BarcodeScannerOptions
-import com.google.mlkit.vision.barcode.BarcodeScanning
 import com.google.mlkit.vision.barcode.common.Barcode
-import com.google.mlkit.vision.common.InputImage
 import com.omarkarimli.mlapp.ui.navigation.Screen
-import com.omarkarimli.mlapp.ui.presentation.components.ActionImage
+import com.omarkarimli.mlapp.ui.presentation.components.DetectedActionImage
 import com.omarkarimli.mlapp.ui.presentation.components.CameraPermissionPlaceholder
 import com.omarkarimli.mlapp.ui.theme.MLAppTheme
 import com.omarkarimli.mlapp.utils.Dimens
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import java.util.concurrent.Executors
-
-data class ScannedBarcode(val barcode: Barcode, val imageUri: Uri? = null)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -61,23 +49,23 @@ fun BarcodeScanningScreen(navController: NavHostController) {
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
 
-    var hasCameraPermission by remember {
-        mutableStateOf(ContextCompat.checkSelfPermission(context, Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED)
-    }
+    // Instantiate the ViewModel directly within the composable
+    val viewModel: BarcodeScanningViewModel = viewModel()
 
-    var hasStoragePermission by remember {
-        mutableStateOf(
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU)
-                ContextCompat.checkSelfPermission(context, Manifest.permission.READ_MEDIA_IMAGES) == PackageManager.PERMISSION_GRANTED
-            else
-                ContextCompat.checkSelfPermission(context, Manifest.permission.READ_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED
-        )
-    }
+    val hasCameraPermission by viewModel.hasCameraPermission.collectAsState()
+    val hasStoragePermission by viewModel.hasStoragePermission.collectAsState()
+    val barcodeResults by viewModel.barcodeResults.collectAsState()
+    val cameraSelector by viewModel.cameraSelector.collectAsState()
+    val shouldExpandBottomSheet by viewModel.shouldExpandBottomSheet.collectAsState()
+
+    val sheetScaffoldState = rememberBottomSheetScaffoldState(
+        bottomSheetState = rememberStandardBottomSheetState(SheetValue.PartiallyExpanded, skipHiddenState = true)
+    )
 
     val cameraPermissionLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestPermission()
     ) { isGranted ->
-        hasCameraPermission = isGranted
+        viewModel.setCameraPermission(isGranted)
         if (!isGranted) {
             Toast.makeText(context, "Camera permission is required for live scanning.", Toast.LENGTH_SHORT).show()
         }
@@ -86,13 +74,14 @@ fun BarcodeScanningScreen(navController: NavHostController) {
     val storagePermissionLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestPermission()
     ) { isGranted ->
-        hasStoragePermission = isGranted
+        viewModel.setStoragePermission(isGranted)
         if (!isGranted) {
             Toast.makeText(context, "Storage permission is required to pick photos.", Toast.LENGTH_SHORT).show()
         }
     }
 
     LaunchedEffect(Unit) {
+        viewModel.initializePermissions(context)
         if (!hasCameraPermission) cameraPermissionLauncher.launch(Manifest.permission.CAMERA)
         if (!hasStoragePermission) {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU)
@@ -102,32 +91,18 @@ fun BarcodeScanningScreen(navController: NavHostController) {
         }
     }
 
-    val barcodeResults = remember { mutableStateListOf<ScannedBarcode>() }
-
-    val sheetScaffoldState = rememberBottomSheetScaffoldState(
-        bottomSheetState = rememberStandardBottomSheetState(SheetValue.PartiallyExpanded, skipHiddenState = true)
-    )
-
     val pickImageLauncher = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
         uri?.let {
-            coroutineScope.launch {
-                analyzeImageForBarcodes(context, it) { results ->
-                    results.forEach { newBarcode ->
-                        if (barcodeResults.none { prevBarcode -> prevBarcode.barcode.rawValue == newBarcode.barcode.rawValue }) {
-                            barcodeResults.add(newBarcode)
-                        }
-                    }
-                    if (results.isNotEmpty()) {
-                        launch {
-                            sheetScaffoldState.bottomSheetState.expand()
-                        }
-                    }
-                }
-            }
+            viewModel.analyzeImageForBarcodes(context, it)
         }
     }
 
-    var cameraSelector by remember { mutableStateOf(CameraSelector.DEFAULT_BACK_CAMERA) }
+    LaunchedEffect(shouldExpandBottomSheet) {
+        if (shouldExpandBottomSheet) {
+            sheetScaffoldState.bottomSheetState.expand()
+            viewModel.resetBottomSheetExpansion()
+        }
+    }
 
     Scaffold(
         topBar = {
@@ -164,7 +139,7 @@ fun BarcodeScanningScreen(navController: NavHostController) {
                     }
                     Spacer(Modifier.size(Dimens.SpacerSmall))
                     FilledTonalIconButton(
-                        onClick = { /* Save */ },
+                        onClick = { /* Save - Business logic for saving would go in ViewModel */ },
                         modifier = Modifier.width(Dimens.IconSizeExtraLarge).height(Dimens.IconSizeLarge),
                         shape = IconButtonDefaults.filledShape
                     ) {
@@ -184,13 +159,7 @@ fun BarcodeScanningScreen(navController: NavHostController) {
             sheetDragHandle = { BottomSheetDefaults.DragHandle() },
             sheetContent = {
                 BottomSheetContent(barcodeResults, context) {
-                    cameraSelector = if (cameraSelector == CameraSelector.DEFAULT_BACK_CAMERA) {
-                        Log.e("BarcodeScreen", "Switching to front camera")
-                        CameraSelector.DEFAULT_FRONT_CAMERA
-                    } else {
-                        Log.e("BarcodeScreen", "Switching to back camera")
-                        CameraSelector.DEFAULT_BACK_CAMERA
-                    }
+                    viewModel.onFlipCamera()
                 }
             },
             content = {
@@ -202,18 +171,7 @@ fun BarcodeScanningScreen(navController: NavHostController) {
                         CameraPreview(
                             modifier = Modifier.fillMaxWidth().weight(1f).padding(horizontal = Dimens.PaddingMedium).background(Color.Black, RoundedCornerShape(Dimens.CornerRadiusMedium)),
                             cameraSelector = cameraSelector,
-                            onBarcodeDetected = { barcodes ->
-                                barcodes.forEach { newBarcode ->
-                                    if (barcodeResults.none { it.barcode.rawValue == newBarcode.rawValue }) {
-                                        barcodeResults.add(ScannedBarcode(newBarcode, null))
-                                    }
-                                }
-                                coroutineScope.launch {
-                                    if (barcodes.isNotEmpty()) {
-                                        sheetScaffoldState.bottomSheetState.partialExpand()
-                                    }
-                                }
-                            }
+                            onBarcodeDetected = { barcodes -> viewModel.onBarcodeDetected(barcodes) }
                         )
                     } else {
                         CameraPermissionPlaceholder(
@@ -271,66 +229,8 @@ fun BottomSheetContent(barcodeResults: List<ScannedBarcode>, context: Context, o
             LazyColumn(modifier = Modifier.fillMaxWidth().heightIn(max = Dimens.BarcodeListMaxHeight), contentPadding = PaddingValues(vertical = Dimens.PaddingExtraSmall)) {
                 itemsIndexed(barcodeResults) { index, scannedBarcode ->
                     BarcodeResultCard(scannedBarcode, context)
-                    if (index < barcodeResults.lastIndex) HorizontalDivider(modifier = Modifier.padding(vertical = Dimens.PaddingMedium))
+                    if (index < barcodeResults.lastIndex) HorizontalDivider()
                 }
-            }
-        }
-    }
-}
-
-class BarcodeAnalyzer(private val listener: (List<Barcode>) -> Unit) : ImageAnalysis.Analyzer {
-    private val options = BarcodeScannerOptions.Builder().setBarcodeFormats(Barcode.FORMAT_ALL_FORMATS).build()
-    private val scanner = BarcodeScanning.getClient(options)
-
-    @androidx.annotation.OptIn(androidx.camera.core.ExperimentalGetImage::class)
-    override fun analyze(imageProxy: ImageProxy) {
-        val mediaImage = imageProxy.image
-        if (mediaImage != null) {
-            val image = InputImage.fromMediaImage(mediaImage, imageProxy.imageInfo.rotationDegrees)
-            scanner.process(image)
-                .addOnSuccessListener { barcodes -> if (barcodes.isNotEmpty()) listener(barcodes) }
-                .addOnFailureListener { e -> Log.e("BarcodeScanner", "Barcode scanning failed: ${e.message}", e) }
-                .addOnCompleteListener { imageProxy.close() }
-        } else imageProxy.close()
-    }
-}
-
-suspend fun analyzeImageForBarcodes(context: Context, imageUri: Uri, onResult: (List<ScannedBarcode>) -> Unit) {
-    withContext(Dispatchers.IO) {
-        try {
-            val bitmap = try {
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P)
-                    ImageDecoder.decodeBitmap(ImageDecoder.createSource(context.contentResolver, imageUri))
-                else
-                    @Suppress("DEPRECATION") MediaStore.Images.Media.getBitmap(context.contentResolver, imageUri)
-            } catch (e: Exception) {
-                Log.e("BarcodeScanner", "Error decoding image: ${e.message}", e)
-                null
-            }
-
-            bitmap?.let {
-                val image = InputImage.fromBitmap(it, 0)
-                val options = BarcodeScannerOptions.Builder().setBarcodeFormats(Barcode.FORMAT_ALL_FORMATS).build()
-                val scanner = BarcodeScanning.getClient(options)
-                scanner.process(image)
-                    .addOnSuccessListener { barcodes ->
-                        val scannedBarcodes = barcodes.map {currentBarcode -> ScannedBarcode(currentBarcode, imageUri) }
-                        onResult(scannedBarcodes)
-                        if (barcodes.isEmpty()) {
-                            Toast.makeText(context, "No barcodes found in the selected image.", Toast.LENGTH_SHORT).show()
-                        }
-                    }
-                    .addOnFailureListener { e ->
-                        Log.e("BarcodeScanner", "Image barcode scanning failed: ${e.message}", e)
-                        Toast.makeText(context, "Error analyzing image: ${e.message}", Toast.LENGTH_SHORT).show()
-                    }
-            } ?: withContext(Dispatchers.Main) {
-                Toast.makeText(context, "Failed to decode image from gallery.", Toast.LENGTH_SHORT).show()
-            }
-        } catch (e: Exception) {
-            Log.e("BarcodeScanner", "Unexpected error: ${e.message}", e)
-            withContext(Dispatchers.Main) {
-                Toast.makeText(context, "Unexpected error: ${e.message}", Toast.LENGTH_SHORT).show()
             }
         }
     }
@@ -340,13 +240,13 @@ suspend fun analyzeImageForBarcodes(context: Context, imageUri: Uri, onResult: (
 fun BarcodeResultCard(scannedBarcode: ScannedBarcode, context: Context) {
     val barcode = scannedBarcode.barcode
     val imageUri = scannedBarcode.imageUri
-    Row(modifier = Modifier.fillMaxWidth().padding(Dimens.PaddingExtraSmall), verticalAlignment = Alignment.CenterVertically) {
+    Row(modifier = Modifier.fillMaxWidth().padding(horizontal = Dimens.PaddingExtraSmall, vertical = Dimens.PaddingMedium), verticalAlignment = Alignment.CenterVertically) {
         Column(modifier = Modifier.weight(1f)) {
             Text("Format: ${getBarcodeFormatName(barcode.format)}", style = MaterialTheme.typography.bodyLarge)
             Text("Value: ${barcode.rawValue ?: "N/A"}", style = MaterialTheme.typography.bodyMedium)
             Text("Type: ${getBarcodeValueTypeName(barcode.valueType)}", style = MaterialTheme.typography.bodySmall, color = Color.Gray)
         }
-        ActionImage(context, imageUri)
+        DetectedActionImage(context, imageUri)
     }
 }
 
