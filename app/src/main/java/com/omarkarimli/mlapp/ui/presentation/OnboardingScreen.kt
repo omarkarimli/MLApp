@@ -105,9 +105,8 @@ private fun ScrollContent(
                     Spacer(modifier = Modifier.height(Dimens.SpacerHeightExtraLarge)) // Use Dimens for top spacer
                     Text(
                         text = onboardingPages[page].title,
-                        style = MaterialTheme.typography.displayLarge,
-                        fontWeight = FontWeight.Bold,
-                        lineHeight = Dimens.LineHeightDisplayLarge // Use Dimens for line height
+                        style = MaterialTheme.typography.displayMedium,
+                        lineHeight = Dimens.LineHeightDisplayMedium
                     )
                     Spacer(modifier = Modifier.height(Dimens.SpacerHeightMedium)) // Use Dimens for spacer
                     Image(
@@ -123,7 +122,7 @@ private fun ScrollContent(
                     Spacer(modifier = Modifier.height(Dimens.SpacerHeightLarge)) // Use Dimens for spacer
                     Text(
                         text = onboardingPages[page].description,
-                        style = MaterialTheme.typography.headlineMedium,
+                        style = MaterialTheme.typography.headlineSmall,
                         fontWeight = FontWeight.Normal,
                         lineHeight = Dimens.LineHeightHeadlineMedium, // Use Dimens for line height
                         modifier = Modifier.padding(end = Dimens.PaddingMedium) // Use Dimens for padding

@@ -51,6 +51,7 @@ object Dimens {
 
     // Text Sizes (if you want more specific control than MaterialTheme.typography)
     val LineHeightDisplayLarge = 72.sp
+    val LineHeightDisplayMedium = 64.sp
     val LineHeightHeadlineMedium = 42.sp
     val LetterSpacingButton = 1.sp
 }
