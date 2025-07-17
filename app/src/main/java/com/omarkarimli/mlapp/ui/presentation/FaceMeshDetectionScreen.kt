@@ -494,7 +494,7 @@ fun BottomSheetContentFaceMeshes(faceMeshResults: List<ScannedFaceMesh>, context
             ) {
                 itemsIndexed(faceMeshResults) { index, scannedFaceMesh ->
                     FaceMeshResultCard(scannedFaceMesh = scannedFaceMesh, context = context)
-                    if (index < faceMeshResults.lastIndex) HorizontalDivider(modifier = Modifier.padding(vertical = Dimens.PaddingMedium))
+                    if (index < faceMeshResults.lastIndex) HorizontalDivider()
                 }
             }
         }
@@ -594,7 +594,7 @@ fun FaceMeshResultCard(scannedFaceMesh: ScannedFaceMesh, context: Context) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(Dimens.PaddingExtraSmall),
+            .padding(horizontal = Dimens.PaddingExtraSmall, vertical = Dimens.PaddingMedium),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Column(

@@ -494,7 +494,7 @@ fun BottomSheetContentImageLabel(imageLabelResults: List<ImageLabelResult>, cont
             ) {
                 itemsIndexed(imageLabelResults) { index, imageLabelResult ->
                     ImageLabelResultCard(imageLabelResult = imageLabelResult, context = context)
-                    if (index < imageLabelResults.lastIndex) HorizontalDivider(modifier = Modifier.padding(vertical = Dimens.PaddingMedium))
+                    if (index < imageLabelResults.lastIndex) HorizontalDivider()
                 }
             }
         }
@@ -588,7 +588,7 @@ fun ImageLabelResultCard(imageLabelResult: ImageLabelResult, context: Context) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(Dimens.PaddingExtraSmall),
+            .padding(Dimens.PaddingExtraSmall, vertical = Dimens.PaddingMedium),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Column(

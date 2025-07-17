@@ -456,7 +456,7 @@ fun TextRecognitionBottomSheetContent(textResults: List<RecognizedText>, context
             ) {
                 itemsIndexed(textResults) { index, recognizedText ->
                     TextResultCard(recognizedText = recognizedText, context = context)
-                    if (index < textResults.lastIndex) HorizontalDivider(modifier = Modifier.padding(vertical = Dimens.PaddingMedium))
+                    if (index < textResults.lastIndex) HorizontalDivider()
                 }
             }
         }
@@ -554,7 +554,7 @@ fun TextResultCard(recognizedText: RecognizedText, context: Context) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(Dimens.PaddingExtraSmall),
+            .padding(horizontal = Dimens.PaddingExtraSmall, vertical = Dimens.PaddingMedium),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Column(

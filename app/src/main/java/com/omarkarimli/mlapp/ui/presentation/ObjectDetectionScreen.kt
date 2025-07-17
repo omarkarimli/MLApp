@@ -497,7 +497,7 @@ fun BottomSheetContentObjects(objectResults: List<ScannedObject>, context: Conte
             ) {
                 itemsIndexed(objectResults) { index, scannedObject ->
                     ObjectResultCard(scannedObject = scannedObject, context = context)
-                    if (index < objectResults.lastIndex) HorizontalDivider(modifier = Modifier.padding(vertical = Dimens.PaddingMedium))
+                    if (index < objectResults.lastIndex) HorizontalDivider()
                 }
             }
         }
@@ -605,7 +605,7 @@ fun ObjectResultCard(scannedObject: ScannedObject, context: Context) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(Dimens.PaddingExtraSmall),
+            .padding(horizontal = Dimens.PaddingExtraSmall, vertical = Dimens.PaddingMedium),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Column(
