@@ -51,6 +51,7 @@ dependencies {
     implementation(libs.androidx.material3)
     implementation(libs.androidx.ui.text.google.fonts)
     implementation(libs.androidx.material3.android)
+    implementation(libs.androidx.constraintlayout)
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
@@ -87,6 +88,9 @@ dependencies {
 
     // Face Mesh Detection
     implementation("com.google.mlkit:face-mesh-detection:16.0.0-beta3")
+
+    // Face Detection
+    implementation("com.google.mlkit:face-detection:16.1.7")
 
     // Text Recognition
     // Latin

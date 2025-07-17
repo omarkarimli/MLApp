@@ -280,7 +280,7 @@ fun FaceMeshDetectionScreen(navController: NavHostController) {
             },
             sheetContent = {
                 BottomSheetContentFaceMeshes(
-                    faceMeshResults = faceMeshResults, 
+                    faceMeshResults = faceMeshResults,
                     context = context,
                     onFlipCamera = {
                         // Toggle camera selector
