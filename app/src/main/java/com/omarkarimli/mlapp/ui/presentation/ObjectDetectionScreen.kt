@@ -633,3 +633,4 @@ fun ObjectDetectionScreenPreview() {
         ObjectDetectionScreen(navController = NavHostController(LocalContext.current))
     }
 }
+

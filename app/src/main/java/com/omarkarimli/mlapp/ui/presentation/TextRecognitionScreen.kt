@@ -11,6 +11,7 @@ import android.provider.MediaStore
 import android.util.Log
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.camera.core.CameraSelector
 import androidx.camera.core.ImageAnalysis
@@ -18,8 +19,10 @@ import androidx.camera.core.ImageProxy
 import androidx.camera.core.Preview
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.camera.view.PreviewView
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -41,6 +44,7 @@ import androidx.compose.material.icons.rounded.FlipCameraIos
 import androidx.compose.material.icons.rounded.Photo
 import androidx.compose.material3.BottomSheetDefaults
 import androidx.compose.material3.BottomSheetScaffold
+import androidx.compose.material3.BottomSheetScaffoldState
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilledIconButton
 import androidx.compose.material3.FilledTonalIconButton
@@ -59,6 +63,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -66,10 +71,14 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.toComposeRect
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.compose.LocalLifecycleOwner
@@ -82,6 +91,7 @@ import com.omarkarimli.mlapp.ui.presentation.components.DetectedActionImage
 import com.omarkarimli.mlapp.ui.presentation.components.CameraPermissionPlaceholder
 import com.omarkarimli.mlapp.ui.theme.MLAppTheme
 import com.omarkarimli.mlapp.utils.Dimens
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -90,7 +100,14 @@ import java.util.concurrent.Executors
 // Data class to hold recognized text and its associated image URI (if from a picked image)
 data class RecognizedText(
     val text: String,
-    val imageUri: Uri? = null // Nullable for live scans
+    val imageUri: Uri? = null, // Nullable for live scans
+    val boundingBox: android.graphics.Rect? = null // Optional bounding box for display in sheet
+)
+
+// Data class to hold detected text and its bounding box for the graphic overlay
+data class TextGraphic(
+    val text: String,
+    val boundingBox: android.graphics.Rect // Use android.graphics.Rect for consistency with ML Kit
 )
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -157,7 +174,11 @@ fun TextRecognitionScreen(navController: NavHostController) {
         }
     }
 
-    val textResults = remember { mutableStateListOf<RecognizedText>() }
+    val textResults = remember { mutableStateListOf<RecognizedText>() } // For the bottom sheet
+    val detectedGraphics = remember { mutableStateListOf<TextGraphic>() } // For the overlay
+    var currentImageWidth by remember { mutableIntStateOf(0) } // State for camera frame width
+    var currentImageHeight by remember { mutableIntStateOf(0) } // State for camera frame height
+
 
     val sheetScaffoldState = rememberBottomSheetScaffoldState(
         bottomSheetState = rememberStandardBottomSheetState(
@@ -184,6 +205,8 @@ fun TextRecognitionScreen(navController: NavHostController) {
                                 sheetScaffoldState.bottomSheetState.expand()
                             }
                         }
+                        // Clear live scan graphics when picking an image
+                        detectedGraphics.clear()
                     }
                 }
             }
@@ -195,60 +218,13 @@ fun TextRecognitionScreen(navController: NavHostController) {
 
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = {
-                    Text(
-                        Screen.TextRecognition.title,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                    )
-                },
-                navigationIcon = {
-                    IconButton(onClick = { navController.navigateUp() }) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
-                    }
-                },
-                actions = {
-                    FilledIconButton(
-                        onClick = {
-                            if (hasStoragePermission) {
-                                coroutineScope.launch { sheetScaffoldState.bottomSheetState.partialExpand() }
-                                pickImageLauncher.launch("image/*")
-                            } else {
-                                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                                    storagePermissionLauncher.launch(Manifest.permission.READ_MEDIA_IMAGES)
-                                } else {
-                                    storagePermissionLauncher.launch(Manifest.permission.READ_EXTERNAL_STORAGE)
-                                }
-                            }
-                        },
-                        modifier = Modifier.size(Dimens.IconSizeLarge),
-                        shape = IconButtonDefaults.filledShape,
-                        colors = IconButtonDefaults.filledIconButtonColors(
-                            containerColor = MaterialTheme.colorScheme.surfaceContainer,
-                            contentColor = MaterialTheme.colorScheme.onSurface
-                        )
-                    ) {
-                        Icon(
-                            imageVector = Icons.Rounded.Photo,
-                            modifier = Modifier.size(Dimens.IconSizeSmall),
-                            contentDescription = "Pick Photo"
-                        )
-                    }
-                    Spacer(Modifier.size(Dimens.SpacerSmall))
-                    FilledTonalIconButton(
-                        onClick = { /* doSomething() */ }, // Implement save functionality
-                        modifier = Modifier.width(Dimens.IconSizeExtraLarge).height(Dimens.IconSizeLarge),
-                        shape = IconButtonDefaults.filledShape
-                    ) {
-                        Icon(
-                            Icons.Rounded.Done,
-                            modifier = Modifier.size(Dimens.IconSizeSmall),
-                            contentDescription = "Save",
-                        )
-                    }
-                    Spacer(Modifier.size(Dimens.SpacerSmall))
-                }
+            MyTopAppBar(
+                navController = navController,
+                sheetScaffoldState = sheetScaffoldState,
+                hasStoragePermission = hasStoragePermission,
+                storagePermissionLauncher = storagePermissionLauncher,
+                pickImageLauncher = pickImageLauncher,
+                coroutineScope = coroutineScope
             )
         }
     ) { paddingValues ->
@@ -268,12 +244,15 @@ fun TextRecognitionScreen(navController: NavHostController) {
                     onFlipCamera = {
                         // Toggle camera selector
                         cameraSelector = if (cameraSelector == CameraSelector.DEFAULT_BACK_CAMERA) {
-                            Log.e("BarcodeScreen", "Switching to front camera")
+                            Log.d("TextRecognitionScreen", "Switching to front camera")
                             CameraSelector.DEFAULT_FRONT_CAMERA
                         } else {
-                            Log.e("BarcodeScreen", "Switching to back camera")
+                            Log.d("TextRecognitionScreen", "Switching to back camera")
                             CameraSelector.DEFAULT_BACK_CAMERA
                         }
+                        detectedGraphics.clear() // Clear graphics on camera flip
+                        currentImageWidth = 0 // Reset dimensions to trigger re-calculation
+                        currentImageHeight = 0
                     }
                 )
             },
@@ -284,27 +263,54 @@ fun TextRecognitionScreen(navController: NavHostController) {
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
                     if (hasCameraPermission) {
-                        CameraPreviewTextRecognition(
+                        Log.d("TextRecognitionScreen", "Camera permission granted. Displaying camera preview.")
+                        // Use a Box to layer the camera preview and the overlay
+                        Box(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .weight(1f)
-                                .padding(horizontal = Dimens.PaddingMedium)
-                                .background(Color.Black, RoundedCornerShape(Dimens.CornerRadiusMedium)),
-                            cameraSelector = cameraSelector, // Pass the current camera selector
-                            onTextDetected = { recognizedText ->
-                                if (recognizedText.isNotEmpty()) {
-                                    if (textResults.none { it.text == recognizedText }) {
-                                        textResults.add(RecognizedText(recognizedText, null))
+                                .background(Color.Black, RoundedCornerShape(Dimens.CornerRadiusMedium))
+                        ) {
+                            CameraPreviewTextRecognition(
+                                modifier = Modifier.fillMaxSize(), // Fill the Box
+                                cameraSelector = cameraSelector,
+                                onTextGraphicsDetected = { graphics, imgWidth, imgHeight -> // Receive dimensions
+                                    // Update the list for the overlay
+                                    detectedGraphics.clear() // Clear previous frame's graphics
+                                    detectedGraphics.addAll(graphics)
+                                    currentImageWidth = imgWidth
+                                    currentImageHeight = imgHeight
+
+                                    // You can still update textResults for the bottom sheet
+                                    // based on the primary recognized text from the first block or line
+                                    val newRecognizedText = graphics.firstOrNull()?.text ?: ""
+                                    if (newRecognizedText.isNotEmpty()) {
+                                        if (textResults.none { it.text == newRecognizedText }) {
+                                            textResults.add(RecognizedText(newRecognizedText, null, graphics.firstOrNull()?.boundingBox)) // Add bounding box if needed in sheet
+                                        }
+                                    }
+
+                                    coroutineScope.launch {
+                                        if (newRecognizedText.isNotEmpty()) {
+                                            sheetScaffoldState.bottomSheetState.partialExpand()
+                                        }
                                     }
                                 }
-                                coroutineScope.launch {
-                                    if (recognizedText.isNotEmpty()) {
-                                        sheetScaffoldState.bottomSheetState.partialExpand()
-                                    }
-                                }
+                            )
+
+                            // Add the Graphic Overlay on top of the Camera Preview
+                            // Only show overlay if dimensions are valid (avoid division by zero or bad scaling)
+                            if (currentImageWidth > 0 && currentImageHeight > 0) {
+                                TextGraphicOverlay(
+                                    modifier = Modifier.fillMaxSize(),
+                                    detectedTextGraphics = detectedGraphics,
+                                    imageWidth = currentImageWidth,
+                                    imageHeight = currentImageHeight
+                                )
                             }
-                        )
+                        }
                     } else {
+                        Log.d("TextRecognitionScreen", "Camera permission not granted. Showing placeholder.")
                         CameraPermissionPlaceholder(
                             modifier = Modifier
                                 .fillMaxWidth()
@@ -318,10 +324,77 @@ fun TextRecognitionScreen(navController: NavHostController) {
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun CameraPreviewTextRecognition(
+private fun MyTopAppBar(
+    navController: NavHostController,
+    sheetScaffoldState: BottomSheetScaffoldState,
+    hasStoragePermission: Boolean,
+    storagePermissionLauncher: ActivityResultLauncher<String>,
+    pickImageLauncher: ActivityResultLauncher<String>,
+    coroutineScope: CoroutineScope
+) {
+    return TopAppBar(
+        title = {
+            Text(
+                Screen.TextRecognition.title,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+        },
+        navigationIcon = {
+            IconButton(onClick = { navController.navigateUp() }) {
+                Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+            }
+        },
+        actions = {
+            FilledIconButton(
+                onClick = {
+                    if (hasStoragePermission) {
+                        coroutineScope.launch { sheetScaffoldState.bottomSheetState.partialExpand() }
+                        pickImageLauncher.launch("image/*")
+                    } else {
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                            storagePermissionLauncher.launch(Manifest.permission.READ_MEDIA_IMAGES)
+                        } else {
+                            storagePermissionLauncher.launch(Manifest.permission.READ_EXTERNAL_STORAGE)
+                        }
+                    }
+                },
+                modifier = Modifier.size(Dimens.IconSizeLarge),
+                shape = IconButtonDefaults.filledShape,
+                colors = IconButtonDefaults.filledIconButtonColors(
+                    containerColor = MaterialTheme.colorScheme.surfaceContainer,
+                    contentColor = MaterialTheme.colorScheme.onSurface
+                )
+            ) {
+                Icon(
+                    imageVector = Icons.Rounded.Photo,
+                    modifier = Modifier.size(Dimens.IconSizeSmall),
+                    contentDescription = "Pick Photo"
+                )
+            }
+            Spacer(Modifier.size(Dimens.SpacerSmall))
+            FilledTonalIconButton(
+                onClick = { /* doSomething() */ }, // Implement save functionality
+                modifier = Modifier.width(Dimens.IconSizeExtraLarge).height(Dimens.IconSizeLarge),
+                shape = IconButtonDefaults.filledShape
+            ) {
+                Icon(
+                    Icons.Rounded.Done,
+                    modifier = Modifier.size(Dimens.IconSizeSmall),
+                    contentDescription = "Save",
+                )
+            }
+            Spacer(Modifier.size(Dimens.SpacerSmall))
+        }
+    )
+}
+
+@Composable
+private fun CameraPreviewTextRecognition(
     modifier: Modifier = Modifier,
-    onTextDetected: (String) -> Unit,
+    onTextGraphicsDetected: (List<TextGraphic>, Int, Int) -> Unit, // Updated signature
     cameraSelector: CameraSelector // Receive camera selector as a parameter
 ) {
     val context = LocalContext.current
@@ -332,8 +405,9 @@ fun CameraPreviewTextRecognition(
     AndroidView(
         modifier = modifier,
         factory = { ctx ->
+            Log.d("CameraPreviewTR", "Factory: Creating PreviewView")
             val previewView = PreviewView(ctx).apply {
-                this.scaleType = PreviewView.ScaleType.FILL_CENTER
+                this.scaleType = PreviewView.ScaleType.FIT_CENTER
             }
             val cameraProvider = cameraProviderFuture.get()
 
@@ -347,8 +421,8 @@ fun CameraPreviewTextRecognition(
                 .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
                 .build()
                 .also {
-                    it.setAnalyzer(cameraExecutor, TextAnalyzer { recognizedText ->
-                        onTextDetected(recognizedText)
+                    it.setAnalyzer(cameraExecutor, TextAnalyzer { recognizedTextGraphics, imgWidth, imgHeight ->
+                        onTextGraphicsDetected(recognizedTextGraphics, imgWidth, imgHeight)
                     })
                 }
 
@@ -356,20 +430,24 @@ fun CameraPreviewTextRecognition(
                 cameraProvider.unbindAll()
                 cameraProvider.bindToLifecycle(
                     lifecycleOwner,
-                    CameraSelector.DEFAULT_BACK_CAMERA,
+                    cameraSelector, // Use the provided cameraSelector initially
                     preview,
                     imageAnalyzer
                 )
+                //Log.d("CameraPreviewTR", "Factory: Camera bound successfully with selector: ${cameraSelector.lensFacing.toString()}")
             } catch (exc: Exception) {
-                Log.e("TextRecognizer", "Use case binding failed", exc)
+                Log.e("CameraPreviewTR", "Factory: Use case binding failed", exc)
             }
             previewView
         },
         update = { previewView -> // This block runs on recomposition when cameraSelector changes
+            //Log.d("CameraPreviewTR", "Update: Recomposition detected for CameraPreviewTextRecognition. Camera Selector: ${cameraSelector.lensFacing}")
             val cameraProvider = cameraProviderFuture.get()
 
-            // Unbind all use cases before rebinding
+            // Unbind all use cases before rebinding to apply new camera selector
             cameraProvider.unbindAll()
+            Log.d("CameraPreviewTR", "Update: Unbound all use cases.")
+
 
             val preview = Preview.Builder()
                 .build()
@@ -381,8 +459,8 @@ fun CameraPreviewTextRecognition(
                 .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
                 .build()
                 .also {
-                    it.setAnalyzer(cameraExecutor, TextAnalyzer { detectedTexts ->
-                        onTextDetected(detectedTexts)
+                    it.setAnalyzer(cameraExecutor, TextAnalyzer { detectedTexts, imgWidth, imgHeight ->
+                        onTextGraphicsDetected(detectedTexts, imgWidth, imgHeight)
                     })
                 }
 
@@ -393,8 +471,9 @@ fun CameraPreviewTextRecognition(
                     preview,
                     imageAnalyzer
                 )
+                // Log.d("CameraPreviewTR", "Update: Camera rebound successfully with selector: ${cameraSelector.lensFacing}")
             } catch (exc: Exception) {
-                Log.e("BarcodeScanner", "Use case binding failed", exc)
+                Log.e("CameraPreviewTR", "Update: Use case binding failed: ${exc.message}", exc)
                 Toast.makeText(context, "Error switching camera: ${exc.message}", Toast.LENGTH_SHORT).show()
             }
         }
@@ -402,14 +481,58 @@ fun CameraPreviewTextRecognition(
 
     DisposableEffect(Unit) {
         onDispose {
+            Log.d("CameraPreviewTR", "DisposableEffect: Shutting down camera executor.")
             cameraExecutor.shutdown()
+        }
+    }
+}
+
+@Composable
+private fun TextGraphicOverlay(
+    modifier: Modifier = Modifier,
+    detectedTextGraphics: List<TextGraphic>,
+    imageWidth: Int, // The width of the image being analyzed (e.g., camera frame width)
+    imageHeight: Int // The height of the image being analyzed (e.g., camera frame height)
+) {
+    Canvas(modifier = modifier) {
+        if (imageWidth <= 0 || imageHeight <= 0) {
+            Log.w("TextGraphicOverlay", "Invalid image dimensions: $imageWidth x $imageHeight. Skipping drawing.")
+            return@Canvas
+        }
+
+        // Calculate scaling factors relative to the Canvas's current size
+        // size.width and size.height refer to the dimensions of the Composable itself
+        val scaleX = size.width / imageWidth
+        val scaleY = size.height / imageHeight
+
+        detectedTextGraphics.forEach { graphic ->
+            val rect = graphic.boundingBox
+
+            // Scale and translate the bounding box to fit the Canvas composable's dimensions
+            val scaledRect = rect.toComposeRect().let {
+                it.copy(
+                    left = it.left * scaleX,
+                    top = it.top * scaleY,
+                    right = it.right * scaleX,
+                    bottom = it.bottom * scaleY
+                )
+            }
+
+            // Draw the rectangle
+            drawRoundRect(
+                color = Color.White,
+                topLeft = scaledRect.topLeft,
+                size = scaledRect.size,
+                cornerRadius = CornerRadius(x = 8.dp.toPx(), y = 8.dp.toPx()),
+                style = Stroke(width = 4.dp.toPx())
+            )
         }
     }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun TextRecognitionBottomSheetContent(textResults: List<RecognizedText>, context: Context, onFlipCamera: () -> Unit) {
+private fun TextRecognitionBottomSheetContent(textResults: List<RecognizedText>, context: Context, onFlipCamera: () -> Unit) {
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -463,7 +586,7 @@ fun TextRecognitionBottomSheetContent(textResults: List<RecognizedText>, context
     }
 }
 
-class TextAnalyzer(private val listener: (String) -> Unit) : ImageAnalysis.Analyzer {
+private class TextAnalyzer(private val listener: (List<TextGraphic>, Int, Int) -> Unit) : ImageAnalysis.Analyzer {
     private val recognizer = TextRecognition.getClient(TextRecognizerOptions.DEFAULT_OPTIONS)
 
     @androidx.annotation.OptIn(androidx.camera.core.ExperimentalGetImage::class)
@@ -471,16 +594,23 @@ class TextAnalyzer(private val listener: (String) -> Unit) : ImageAnalysis.Analy
         val mediaImage = imageProxy.image
         if (mediaImage != null) {
             val image = InputImage.fromMediaImage(mediaImage, imageProxy.imageInfo.rotationDegrees)
+            val frameWidth = imageProxy.width // Get actual width from ImageProxy
+            val frameHeight = imageProxy.height // Get actual height from ImageProxy
 
             recognizer.process(image)
                 .addOnSuccessListener { visionText ->
-                    val recognizedText = visionText.text
-                    if (recognizedText.isNotEmpty()) {
-                        listener(recognizedText)
+                    val detectedTextGraphics = mutableListOf<TextGraphic>()
+                    for (block in visionText.textBlocks) {
+                        // For simplicity, we'll draw rectangles for each TextBlock
+                        // You could iterate further (lines, elements) for more granular boxes
+                        block.boundingBox?.let { bbox ->
+                            detectedTextGraphics.add(TextGraphic(block.text, bbox))
+                        }
                     }
+                    listener(detectedTextGraphics, frameWidth, frameHeight)
                 }
                 .addOnFailureListener { e ->
-                    Log.e("TextRecognizer", "Text recognition failed: ${e.message}", e)
+                    Log.e("TextAnalyzer", "Text recognition failed: ${e.message}", e)
                 }
                 .addOnCompleteListener {
                     imageProxy.close()
@@ -491,7 +621,7 @@ class TextAnalyzer(private val listener: (String) -> Unit) : ImageAnalysis.Analy
     }
 }
 
-suspend fun analyzeImageForText(
+private suspend fun analyzeImageForText(
     context: Context,
     imageUri: Uri,
     onResult: (List<RecognizedText>) -> Unit
@@ -520,7 +650,10 @@ suspend fun analyzeImageForText(
                     .addOnSuccessListener { visionText ->
                         val recognizedText = visionText.text
                         val results = if (recognizedText.isNotEmpty()) {
-                            listOf(RecognizedText(recognizedText, imageUri))
+                            // For picked images, we typically don't have bounding boxes directly for individual blocks
+                            // or it's not often used in the same way as live camera.
+                            // If you need it, you would iterate visionText.textBlocks here.
+                            listOf(RecognizedText(recognizedText, imageUri, visionText.textBlocks.firstOrNull()?.boundingBox))
                         } else {
                             emptyList()
                         }
@@ -548,7 +681,7 @@ suspend fun analyzeImageForText(
 }
 
 @Composable
-fun TextResultCard(recognizedText: RecognizedText, context: Context) {
+private fun TextResultCard(recognizedText: RecognizedText, context: Context) {
     val imageUri = recognizedText.imageUri
 
     Row(
