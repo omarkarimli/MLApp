@@ -523,7 +523,7 @@ private fun TextGraphicOverlay(
                 color = Color.White,
                 topLeft = scaledRect.topLeft,
                 size = scaledRect.size,
-                cornerRadius = CornerRadius(x = 8.dp.toPx(), y = 8.dp.toPx()),
+                cornerRadius = CornerRadius(x = Dimens.CornerRadiusMedium.toPx(), y = Dimens.CornerRadiusMedium.toPx()),
                 style = Stroke(width = 4.dp.toPx())
             )
         }

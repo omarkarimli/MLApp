@@ -312,7 +312,6 @@ fun FaceMeshDetectionScreen(navController: NavHostController) {
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .weight(1f)
-                                .padding(horizontal = Dimens.PaddingMedium)
                                 .background(Color.Black, RoundedCornerShape(Dimens.CornerRadiusMedium)),
                             cameraSelector = cameraSelector,
                             onFaceMeshesDetected = { faceMeshes ->
@@ -409,11 +408,10 @@ class GraphicOverlay @JvmOverloads constructor(context: Context, attrs: Attribut
 
         val scaleX = overlayWidth.toFloat() / imageWidth
         val scaleY = overlayHeight.toFloat() / imageHeight
-        scaleFactor = min(scaleX, scaleY) // default
-        // scaleFactor = (scaleX + scaleY) / 2
+        scaleFactor = min(scaleX, scaleY) * Dimens.FixedFaceMeshScaleFactor
 
-        translateX = (overlayWidth - imageWidth * scaleFactor) / 2 // default / 2
-        translateY = (overlayHeight - imageHeight * scaleFactor) / 2 // default / 2
+        translateX = (overlayWidth - imageWidth * scaleFactor) / 2 + Dimens.FixedFaceMeshPaddingX
+        translateY = (overlayHeight - imageHeight * scaleFactor) / 2 - Dimens.FixedFaceMeshPaddingY
 
         postInvalidate() // Request a redraw with new scale/translation
     }

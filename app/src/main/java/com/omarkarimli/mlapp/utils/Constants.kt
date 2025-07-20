@@ -6,5 +6,9 @@ object Constants {
     const val IS_NOTIFICATIONS_ENABLED = "is_notifications_enabled"
     const val DARK_MODE = "dark_mode"
 
+    // Font
     const val POPPINS = "Poppins"
+
+    // AI
+    const val NOT_APPLICABLE = "N/A"
 }

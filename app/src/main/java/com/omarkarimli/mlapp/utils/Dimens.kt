@@ -54,4 +54,12 @@ object Dimens {
     val LineHeightDisplayMedium = 64.sp
     val LineHeightHeadlineMedium = 42.sp
     val LetterSpacingButton = 1.sp
+
+    const val DrawLineStrokeWidth = 6f
+    const val DrawLabelTextSize = 40f
+
+    const val FixedFaceMeshScaleFactor = 1.25f
+
+    const val FixedFaceMeshPaddingX = 172f
+    const val FixedFaceMeshPaddingY = 156f
 }
