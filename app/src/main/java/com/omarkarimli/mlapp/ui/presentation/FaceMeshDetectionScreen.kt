@@ -497,7 +497,7 @@ fun CameraPreviewFaceMeshDetection(modifier: Modifier = Modifier, onFaceMeshesDe
             modifier = Modifier.fillMaxSize(), // Fill the entire Box
             factory = { ctx ->
                 val previewView = PreviewView(ctx).apply {
-                    this.scaleType = PreviewView.ScaleType.FIT_CENTER // FILL_CENTER
+                    this.scaleType = PreviewView.ScaleType.FIT_START // FILL_CENTER
                 }
                 // Add listener to cameraProviderFuture to bind camera once available
                 cameraProviderFuture.addListener({

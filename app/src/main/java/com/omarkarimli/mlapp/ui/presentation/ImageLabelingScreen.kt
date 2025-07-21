@@ -2,12 +2,8 @@ package com.omarkarimli.mlapp.ui.presentation
 
 import android.Manifest
 import android.content.Context
-import android.content.pm.PackageManager
-import android.graphics.Bitmap
-import android.graphics.ImageDecoder
 import android.net.Uri
 import android.os.Build
-import android.provider.MediaStore
 import android.util.Log
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -58,12 +54,9 @@ import androidx.compose.material3.rememberStandardBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateListOf
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -73,6 +66,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.compose.LocalLifecycleOwner
+import androidx.lifecycle.viewmodel.compose.viewModel // Only default viewModel() import needed
 import androidx.navigation.NavHostController
 import com.google.mlkit.vision.common.InputImage
 import com.google.mlkit.vision.label.ImageLabel
@@ -83,83 +77,47 @@ import com.omarkarimli.mlapp.ui.presentation.components.DetectedActionImage
 import com.omarkarimli.mlapp.ui.presentation.components.CameraPermissionPlaceholder
 import com.omarkarimli.mlapp.ui.theme.MLAppTheme
 import com.omarkarimli.mlapp.utils.Dimens
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import java.util.concurrent.Executors
-
-// Data class to hold an ImageLabel and its associated image URI (if from a picked image)
-data class ImageLabelResult(
-    val label: ImageLabel,
-    val imageUri: Uri? = null // Nullable for live scans
-)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ImageLabelingScreen(navController: NavHostController) {
     val context = LocalContext.current
-    val coroutineScope = rememberCoroutineScope()
 
-    var hasCameraPermission by remember {
-        mutableStateOf(
-            ContextCompat.checkSelfPermission(
-                context,
-                Manifest.permission.CAMERA
-            ) == PackageManager.PERMISSION_GRANTED
-        )
-    }
+    val viewModel: ImageLabelingViewModel = viewModel()
 
-    var hasStoragePermission by remember {
-        mutableStateOf(
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                ContextCompat.checkSelfPermission(
-                    context,
-                    Manifest.permission.READ_MEDIA_IMAGES
-                ) == PackageManager.PERMISSION_GRANTED
-            } else {
-                ContextCompat.checkSelfPermission(
-                    context,
-                    Manifest.permission.READ_EXTERNAL_STORAGE
-                ) == PackageManager.PERMISSION_GRANTED
-            }
-        )
-    }
+    val hasCameraPermission by viewModel.hasCameraPermission.collectAsState()
+    val hasStoragePermission by viewModel.hasStoragePermission.collectAsState()
+    val imageLabelResults by viewModel.imageLabelResults.collectAsState()
+    val cameraSelector by viewModel.cameraSelector.collectAsState()
 
     val cameraPermissionLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestPermission(),
-        onResult = { isGranted ->
-            hasCameraPermission = isGranted
-            if (!isGranted) {
-                Toast.makeText(context, "Camera permission is required for live labeling.", Toast.LENGTH_SHORT).show()
-            }
-        }
+        onResult = viewModel::onCameraPermissionResult
     )
 
     val storagePermissionLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestPermission(),
-        onResult = { isGranted ->
-            hasStoragePermission = isGranted
-            if (!isGranted) {
-                Toast.makeText(context, "Storage permission is required to pick photos.", Toast.LENGTH_SHORT).show()
-            }
-        }
+        onResult = viewModel::onStoragePermissionResult
+    )
+
+    val pickImageLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetContent(),
+        // CHANGE: Pass context to analyzeImageFromUri
+        onResult = { uri: Uri? -> viewModel.analyzeImageFromUri(context, uri) }
     )
 
     LaunchedEffect(Unit) {
-        if (!hasCameraPermission) {
-            cameraPermissionLauncher.launch(Manifest.permission.CAMERA)
-        }
-        // Only request storage permission if we don't have it already
-        if (!hasStoragePermission) {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                storagePermissionLauncher.launch(Manifest.permission.READ_MEDIA_IMAGES)
-            } else {
-                storagePermissionLauncher.launch(Manifest.permission.READ_EXTERNAL_STORAGE)
-            }
+        // CHANGE: Call initializePermissions with context
+        viewModel.initializePermissions(context)
+
+        // CHANGE: Call requestPermissions with context
+        viewModel.requestPermissions(context, cameraPermissionLauncher, storagePermissionLauncher)
+
+        viewModel.toastMessage.collect { message ->
+            Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
         }
     }
-
-    val imageLabelResults = remember { mutableStateListOf<ImageLabelResult>() }
 
     val sheetScaffoldState = rememberBottomSheetScaffoldState(
         bottomSheetState = rememberStandardBottomSheetState(
@@ -168,40 +126,14 @@ fun ImageLabelingScreen(navController: NavHostController) {
         )
     )
 
-    val pickImageLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.GetContent(),
-        onResult = { uri: Uri? ->
-            uri?.let {
-                coroutineScope.launch {
-                    analyzeImageForLabels(context, it) { results ->
-                        // Clear existing live scan results when a new image is picked
-                        imageLabelResults.removeAll { imageLabelResult ->  imageLabelResult.imageUri == null }
-
-                        results.forEach { newImageLabel ->
-                            // Avoid adding duplicate labels for the same image (can refine comparison if needed)
-                            // This check is more robust, also considering the label itself
-                            if (imageLabelResults.none { prevLabel ->
-                                    prevLabel.label.text == newImageLabel.label.text && prevLabel.imageUri == newImageLabel.imageUri
-                                }) {
-                                imageLabelResults.add(newImageLabel)
-                            }
-                        }
-                        if (results.isNotEmpty()) {
-                            coroutineScope.launch {
-                                // Only expand if the sheet is not already expanded or hidden
-                                if (sheetScaffoldState.bottomSheetState.currentValue != SheetValue.Expanded) {
-                                    sheetScaffoldState.bottomSheetState.expand()
-                                }
-                            }
-                        }
-                    }
-                }
+    // Effect to expand sheet if labels are detected
+    LaunchedEffect(imageLabelResults) {
+        if (imageLabelResults.isNotEmpty()) {
+            if (sheetScaffoldState.bottomSheetState.currentValue == SheetValue.Hidden) {
+                sheetScaffoldState.bottomSheetState.partialExpand()
             }
         }
-    )
-
-    // State to hold the current camera selector (front or back)
-    var cameraSelector by remember { mutableStateOf(CameraSelector.DEFAULT_BACK_CAMERA) }
+    }
 
     Scaffold(
         topBar = {
@@ -222,12 +154,6 @@ fun ImageLabelingScreen(navController: NavHostController) {
                     FilledIconButton(
                         onClick = {
                             if (hasStoragePermission) {
-                                coroutineScope.launch {
-                                    // Ensure sheet is at least partially visible before launching picker
-                                    if (sheetScaffoldState.bottomSheetState.currentValue == SheetValue.Hidden) {
-                                        sheetScaffoldState.bottomSheetState.partialExpand()
-                                    }
-                                }
                                 pickImageLauncher.launch("image/*")
                             } else {
                                 // Request permission if not granted
@@ -236,6 +162,7 @@ fun ImageLabelingScreen(navController: NavHostController) {
                                 } else {
                                     storagePermissionLauncher.launch(Manifest.permission.READ_EXTERNAL_STORAGE)
                                 }
+                                Toast.makeText(context, "Storage permission is required to pick photos.", Toast.LENGTH_SHORT).show()
                             }
                         },
                         modifier = Modifier.size(Dimens.IconSizeLarge),
@@ -253,9 +180,7 @@ fun ImageLabelingScreen(navController: NavHostController) {
                     }
                     Spacer(Modifier.size(Dimens.SpacerSmall))
                     FilledTonalIconButton(
-                        onClick = { /* TODO: Implement save functionality */
-                            Toast.makeText(context, "Save functionality not implemented yet.", Toast.LENGTH_SHORT).show()
-                        },
+                        onClick = viewModel::onSaveClicked,
                         modifier = Modifier
                             .width(Dimens.IconSizeExtraLarge)
                             .height(Dimens.IconSizeLarge),
@@ -285,16 +210,7 @@ fun ImageLabelingScreen(navController: NavHostController) {
                 BottomSheetContentImageLabel(
                     imageLabelResults = imageLabelResults,
                     context = context,
-                    onFlipCamera = {
-                        // Toggle camera selector
-                        cameraSelector = if (cameraSelector == CameraSelector.DEFAULT_BACK_CAMERA) {
-                            Log.e("BarcodeScreen", "Switching to front camera")
-                            CameraSelector.DEFAULT_FRONT_CAMERA
-                        } else {
-                            Log.e("BarcodeScreen", "Switching to back camera")
-                            CameraSelector.DEFAULT_BACK_CAMERA
-                        }
-                    }
+                    onFlipCamera = viewModel::onFlipCameraClicked
                 )
             },
             content = {
@@ -308,29 +224,9 @@ fun ImageLabelingScreen(navController: NavHostController) {
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .weight(1f)
-                                .padding(horizontal = Dimens.PaddingMedium)
                                 .background(Color.Black, RoundedCornerShape(Dimens.CornerRadiusMedium)),
                             cameraSelector = cameraSelector,
-                            onLabelsDetected = { labels ->
-                                // Filter out live scan results, then add new ones
-                                val currentLiveLabels = imageLabelResults.filter { it.imageUri == null }.toSet()
-                                val newLiveLabels = labels.map { ImageLabelResult(it, null) }.toSet()
-
-                                // Only update if there are new labels or existing ones have changed
-                                if (newLiveLabels != currentLiveLabels) {
-                                    imageLabelResults.removeAll { it.imageUri == null } // Remove old live scan results
-                                    imageLabelResults.addAll(newLiveLabels) // Add new ones
-
-                                    coroutineScope.launch {
-                                        if (labels.isNotEmpty()) {
-                                            // Only partially expand if the sheet is currently hidden or collapsed
-                                            if (sheetScaffoldState.bottomSheetState.currentValue == SheetValue.Hidden) {
-                                                sheetScaffoldState.bottomSheetState.partialExpand()
-                                            }
-                                        }
-                                    }
-                                }
-                            }
+                            onLabelsDetected = viewModel::onLiveLabelsDetected
                         )
                     } else {
                         CameraPermissionPlaceholder(
@@ -355,17 +251,15 @@ fun CameraPreview(
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
     val cameraExecutor = remember { Executors.newSingleThreadExecutor() }
-    // Get a Future, not an instance directly, as it's an asynchronous operation
     val cameraProviderFuture = remember { ProcessCameraProvider.getInstance(context) }
 
     AndroidView(
         modifier = modifier,
         factory = { ctx ->
             val previewView = PreviewView(ctx).apply {
-                this.scaleType = PreviewView.ScaleType.FILL_CENTER
+                this.scaleType = PreviewView.ScaleType.FIT_START
             }
 
-            // Get the camera provider once it's available
             cameraProviderFuture.addListener({
                 val cameraProvider = cameraProviderFuture.get()
 
@@ -385,25 +279,24 @@ fun CameraPreview(
                     }
 
                 try {
-                    // Unbind all use cases before rebinding
                     cameraProvider.unbindAll()
                     cameraProvider.bindToLifecycle(
                         lifecycleOwner,
-                        CameraSelector.DEFAULT_BACK_CAMERA,
+                        cameraSelector, // Use the provided cameraSelector
                         preview,
                         imageAnalyzer
                     )
                 } catch (exc: Exception) {
                     Log.e("ImageLabeler", "Use case binding failed", exc)
+                    // Toast.makeText(context, "Error setting up camera: ${exc.message}", Toast.LENGTH_SHORT).show()
                 }
-            }, ContextCompat.getMainExecutor(ctx)) // Use main executor for adding listener
+            }, ContextCompat.getMainExecutor(ctx))
 
             previewView
         },
-        update = { previewView -> // This block runs on recomposition when cameraSelector changes
+        update = { previewView ->
             val cameraProvider = cameraProviderFuture.get()
 
-            // Unbind all use cases before rebinding
             cameraProvider.unbindAll()
 
             val preview = Preview.Builder()
@@ -424,7 +317,7 @@ fun CameraPreview(
             try {
                 cameraProvider.bindToLifecycle(
                     lifecycleOwner,
-                    cameraSelector, // Use the updated cameraSelector
+                    cameraSelector,
                     preview,
                     imageAnalyzer
                 )
@@ -449,10 +342,9 @@ fun BottomSheetContentImageLabel(imageLabelResults: List<ImageLabelResult>, cont
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = Dimens.PaddingMedium)
-            .background(MaterialTheme.colorScheme.background), // Ensure background for drag handle visibility
+            .background(MaterialTheme.colorScheme.background),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        // Drag handle is usually provided by sheetDragHandle in BottomSheetScaffold
         Row(
             modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically,
@@ -467,7 +359,7 @@ fun BottomSheetContentImageLabel(imageLabelResults: List<ImageLabelResult>, cont
                 overflow = TextOverflow.Ellipsis
             )
             IconButton(
-                onClick = onFlipCamera, // Call the onFlipCamera lambda
+                onClick = onFlipCamera,
                 modifier = Modifier.size(Dimens.IconSizeLarge)
             ) {
                 Icon(Icons.Rounded.FlipCameraIos, contentDescription = "Flip Camera")
@@ -484,12 +376,12 @@ fun BottomSheetContentImageLabel(imageLabelResults: List<ImageLabelResult>, cont
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
-            Spacer(modifier = Modifier.height(Dimens.PaddingMedium)) // Add some space if empty
+            Spacer(modifier = Modifier.height(Dimens.PaddingMedium))
         } else {
             LazyColumn(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .heightIn(max = Dimens.BarcodeListMaxHeight), // Important for controlling max height
+                    .heightIn(max = Dimens.BarcodeListMaxHeight),
                 contentPadding = PaddingValues(vertical = Dimens.PaddingExtraSmall)
             ) {
                 itemsIndexed(imageLabelResults) { index, imageLabelResult ->
@@ -512,7 +404,6 @@ class ImageLabelAnalyzer(private val listener: (List<ImageLabel>) -> Unit) : Ima
 
             labeler.process(image)
                 .addOnSuccessListener { labels ->
-                    // Only invoke listener if labels are non-empty to avoid unnecessary recompositions
                     if (labels.isNotEmpty()) {
                         listener(labels)
                     }
@@ -521,61 +412,10 @@ class ImageLabelAnalyzer(private val listener: (List<ImageLabel>) -> Unit) : Ima
                     Log.e("ImageLabeler", "Image labeling failed: ${e.message}", e)
                 }
                 .addOnCompleteListener {
-                    imageProxy.close() // Always close the imageProxy
+                    imageProxy.close()
                 }
         } else {
-            imageProxy.close() // Always close the imageProxy even if mediaImage is null
-        }
-    }
-}
-
-suspend fun analyzeImageForLabels(
-    context: Context,
-    imageUri: Uri,
-    onResult: (List<ImageLabelResult>) -> Unit
-) {
-    withContext(Dispatchers.IO) {
-        try {
-            val bitmap: Bitmap? = try {
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
-                    val source = ImageDecoder.createSource(context.contentResolver, imageUri)
-                    ImageDecoder.decodeBitmap(source)
-                } else {
-                    @Suppress("DEPRECATION")
-                    MediaStore.Images.Media.getBitmap(context.contentResolver, imageUri)
-                }
-            } catch (e: Exception) {
-                Log.e("ImageLabeler", "Error decoding image: ${e.message}", e)
-                null
-            }
-
-            if (bitmap != null) {
-                val image = InputImage.fromBitmap(bitmap, 0)
-
-                val labeler = ImageLabeling.getClient(ImageLabelerOptions.DEFAULT_OPTIONS)
-
-                labeler.process(image)
-                    .addOnSuccessListener { labels ->
-                        val imageLabelResults = labels.map { ImageLabelResult(it, imageUri) }
-                        onResult(imageLabelResults)
-                        if (labels.isEmpty()) {
-                            Toast.makeText(context, "No labels found in the selected image.", Toast.LENGTH_SHORT).show()
-                        }
-                    }
-                    .addOnFailureListener { e ->
-                        Log.e("ImageLabeler", "Image labeling failed: ${e.message}", e)
-                        Toast.makeText(context, "Error analyzing image: ${e.message}", Toast.LENGTH_SHORT).show()
-                    }
-            } else {
-                withContext(Dispatchers.Main) {
-                    Toast.makeText(context, "Failed to decode image from gallery.", Toast.LENGTH_SHORT).show()
-                }
-            }
-        } catch (e: Exception) {
-            Log.e("ImageLabeler", "Unexpected error during image analysis: ${e.message}", e)
-            withContext(Dispatchers.Main) {
-                Toast.makeText(context, "Unexpected error during image analysis: ${e.message}", Toast.LENGTH_SHORT).show()
-            }
+            imageProxy.close()
         }
     }
 }

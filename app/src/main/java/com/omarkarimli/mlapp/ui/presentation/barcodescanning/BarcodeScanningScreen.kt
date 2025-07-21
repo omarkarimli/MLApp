@@ -49,7 +49,6 @@ fun BarcodeScanningScreen(navController: NavHostController) {
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
 
-    // Instantiate the ViewModel directly within the composable
     val viewModel: BarcodeScanningViewModel = viewModel()
 
     val hasCameraPermission by viewModel.hasCameraPermission.collectAsState()
