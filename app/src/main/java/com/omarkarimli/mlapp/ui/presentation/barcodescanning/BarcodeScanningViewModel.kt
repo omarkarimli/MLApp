@@ -96,7 +96,12 @@ class BarcodeScanningViewModel : ViewModel() {
                     val scanner = BarcodeScanning.getClient(options)
                     scanner.process(image)
                         .addOnSuccessListener { barcodes ->
-                            val scannedBarcodes = barcodes.map { currentBarcode -> ScannedBarcode(currentBarcode, imageUri) }
+                            val scannedBarcodes = barcodes.map { currentBarcode ->
+                                ScannedBarcode(
+                                    currentBarcode,
+                                    imageUri
+                                )
+                            }
                             val currentResults = _barcodeResults.value
                             val newBarcodes = scannedBarcodes.filter { newBarcode ->
                                 currentResults.none { prevBarcode -> prevBarcode.barcode.rawValue == newBarcode.barcode.rawValue }

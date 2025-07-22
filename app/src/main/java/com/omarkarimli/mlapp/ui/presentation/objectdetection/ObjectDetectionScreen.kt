@@ -1,20 +1,17 @@
-package com.omarkarimli.mlapp.ui.presentation
+package com.omarkarimli.mlapp.ui.presentation.objectdetection
 
 import android.Manifest
 import android.content.Context
-import android.content.pm.PackageManager
-import android.graphics.Bitmap
-import android.graphics.ImageDecoder
 import android.graphics.Paint
 import android.net.Uri
 import android.os.Build
-import android.provider.MediaStore
 import android.util.Log
 import android.util.Size
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.camera.core.CameraSelector
+import androidx.camera.core.ExperimentalGetImage
 import androidx.camera.core.ImageAnalysis
 import androidx.camera.core.ImageProxy
 import androidx.camera.core.Preview
@@ -62,15 +59,12 @@ import androidx.compose.material3.rememberStandardBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateListOf
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.Stroke
@@ -81,6 +75,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.compose.LocalLifecycleOwner
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
 import com.google.mlkit.vision.common.InputImage
 import com.google.mlkit.vision.objects.DetectedObject
@@ -92,70 +87,76 @@ import com.omarkarimli.mlapp.ui.presentation.components.DetectedActionImage
 import com.omarkarimli.mlapp.ui.theme.MLAppTheme
 import com.omarkarimli.mlapp.utils.Constants
 import com.omarkarimli.mlapp.utils.Dimens
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import java.util.concurrent.Executors
 import kotlin.math.min
 
-// Data class to hold a DetectedObject and its associated image URI (if from a picked image)
-data class ScannedObject(
-    val detectedObject: DetectedObject,
-    val imageUri: Uri? = null // Nullable for live scans
-)
+@androidx.compose.ui.tooling.preview.Preview(showBackground = true)
+@Composable
+fun ObjectDetectionScreenPreview() {
+    MLAppTheme {
+        ObjectDetectionScreen(navController = NavHostController(LocalContext.current))
+    }
+}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun ObjectDetectionScreen(navController: NavHostController) {
+fun ObjectDetectionScreen(navController: NavHostController, viewModel: ObjectDetectionViewModel = viewModel()) {
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
 
-    var hasCameraPermission by remember {
-        mutableStateOf(
-            ContextCompat.checkSelfPermission(
-                context,
-                Manifest.permission.CAMERA
-            ) == PackageManager.PERMISSION_GRANTED
-        )
-    }
+    val hasCameraPermission by viewModel.hasCameraPermission.collectAsState()
+    val hasStoragePermission by viewModel.hasStoragePermission.collectAsState()
+    val objectResults = viewModel.objectResults // This is already a mutableStateListOf, no need for by
+    val cameraSelector by viewModel.cameraSelector.collectAsState()
+    val detectedObjectsForOverlay by viewModel.detectedObjectsForOverlay.collectAsState()
+    val currentImageSize by viewModel.currentImageSize.collectAsState()
 
-    var hasStoragePermission by remember {
-        mutableStateOf(
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                ContextCompat.checkSelfPermission(
-                    context,
-                    Manifest.permission.READ_MEDIA_IMAGES
-                ) == PackageManager.PERMISSION_GRANTED
-            } else {
-                ContextCompat.checkSelfPermission(
-                    context,
-                    Manifest.permission.READ_EXTERNAL_STORAGE
-                ) == PackageManager.PERMISSION_GRANTED
-            }
+    val sheetScaffoldState = rememberBottomSheetScaffoldState(
+        bottomSheetState = rememberStandardBottomSheetState(
+            initialValue = SheetValue.PartiallyExpanded,
+            skipHiddenState = true
         )
+    )
+
+    // Collect Toast messages from ViewModel
+    LaunchedEffect(Unit) {
+        viewModel.toastMessage.collect { message ->
+            Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
+        }
     }
 
     val cameraPermissionLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestPermission(),
         onResult = { isGranted ->
-            hasCameraPermission = isGranted
-            if (!isGranted) {
-                Toast.makeText(context, "Camera permission is required for live detection.", Toast.LENGTH_SHORT).show()
-            }
+            viewModel.updateCameraPermission(isGranted)
         }
     )
 
     val storagePermissionLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestPermission(),
         onResult = { isGranted ->
-            hasStoragePermission = isGranted
-            if (!isGranted) {
-                Toast.makeText(context, "Storage permission is required to pick photos.", Toast.LENGTH_SHORT).show()
+            viewModel.updateStoragePermission(isGranted)
+        }
+    )
+
+    val pickImageLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetContent(),
+        onResult = { uri: Uri? ->
+            viewModel.onImagePicked(context, uri)
+            // Expand sheet if results are available from picked image
+            if (objectResults.any { it.imageUri != null }) { // Check if there are results specifically from picked images
+                coroutineScope.launch {
+                    if (sheetScaffoldState.bottomSheetState.currentValue != SheetValue.Expanded) {
+                        sheetScaffoldState.bottomSheetState.expand()
+                    }
+                }
             }
         }
     )
 
     LaunchedEffect(Unit) {
+        // Initial permission requests
         if (!hasCameraPermission) {
             cameraPermissionLauncher.launch(Manifest.permission.CAMERA)
         }
@@ -167,51 +168,6 @@ fun ObjectDetectionScreen(navController: NavHostController) {
             }
         }
     }
-
-    val objectResults = remember { mutableStateListOf<ScannedObject>() }
-
-    val sheetScaffoldState = rememberBottomSheetScaffoldState(
-        bottomSheetState = rememberStandardBottomSheetState(
-            initialValue = SheetValue.PartiallyExpanded,
-            skipHiddenState = true
-        )
-    )
-
-    val pickImageLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.GetContent(),
-        onResult = { uri: Uri? ->
-            uri?.let {
-                coroutineScope.launch {
-                    analyzeImageForObjects(context, it) { results ->
-                        // Clear existing live scan results when a new image is picked
-                        objectResults.removeAll { scannedObject ->  scannedObject.imageUri == null }
-
-                        results.forEach { newScannedObject ->
-                            // Simple check to avoid duplicates for now, based on label if available
-                            val newLabel = newScannedObject.detectedObject.labels.firstOrNull()?.text
-                            // Improved duplicate check for picked images based on label and URI
-                            if (objectResults.none { prevScannedObject ->
-                                    prevScannedObject.detectedObject.labels.firstOrNull()?.text == newLabel && prevScannedObject.imageUri == newScannedObject.imageUri
-                                }) {
-                                objectResults.add(newScannedObject)
-                            }
-                        }
-                        if (results.isNotEmpty()) {
-                            coroutineScope.launch {
-                                // Only expand if the sheet is not already expanded or hidden
-                                if (sheetScaffoldState.bottomSheetState.currentValue != SheetValue.Expanded) {
-                                    sheetScaffoldState.bottomSheetState.expand()
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        }
-    )
-
-    // State to hold the current camera selector (front or back)
-    var cameraSelector by remember { mutableStateOf(CameraSelector.DEFAULT_BACK_CAMERA) }
 
     Scaffold(
         topBar = {
@@ -262,9 +218,7 @@ fun ObjectDetectionScreen(navController: NavHostController) {
                     }
                     Spacer(Modifier.size(Dimens.SpacerSmall))
                     FilledTonalIconButton(
-                        onClick = { /* TODO: Implement save functionality for detected objects */
-                            Toast.makeText(context, "Save functionality not implemented yet.", Toast.LENGTH_SHORT).show()
-                        },
+                        onClick = { viewModel.onSaveClicked() },
                         modifier = Modifier
                             .width(Dimens.IconSizeExtraLarge)
                             .height(Dimens.IconSizeLarge),
@@ -295,14 +249,7 @@ fun ObjectDetectionScreen(navController: NavHostController) {
                     objectResults = objectResults,
                     context = context,
                     onFlipCamera = {
-                        // Toggle camera selector
-                        cameraSelector = if (cameraSelector == CameraSelector.DEFAULT_BACK_CAMERA) {
-                            Log.e("ObjectDetectionScreen", "Switching to front camera")
-                            CameraSelector.DEFAULT_FRONT_CAMERA
-                        } else {
-                            Log.e("ObjectDetectionScreen", "Switching to back camera")
-                            CameraSelector.DEFAULT_BACK_CAMERA
-                        }
+                        viewModel.onFlipCamera()
                     }
                 )
             },
@@ -313,41 +260,24 @@ fun ObjectDetectionScreen(navController: NavHostController) {
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
                     if (hasCameraPermission) {
-                        CameraPreviewObjectDetection(
+                        CameraPreview(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .weight(1f)
                                 .background(Color.Black, RoundedCornerShape(Dimens.CornerRadiusMedium)),
                             cameraSelector = cameraSelector,
-                            onObjectsDetected = { objects, imageSize -> // Now receives imageSize
-                                // Filter out live scan results, then add new ones
-                                val currentLiveObjects = objectResults.filter { it.imageUri == null }.map { it.detectedObject.labels.firstOrNull()?.text to it.detectedObject.boundingBox }.toSet()
-                                val newLiveObjects = objects.map { it.labels.firstOrNull()?.text to it.boundingBox }.toSet()
-
-                                if (newLiveObjects != currentLiveObjects) {
-                                    objectResults.removeAll { it.imageUri == null } // Remove old live scan results
-                                    objects.forEach { newObject ->
-                                        // Only add if it's genuinely new to the live scan list
-                                        if (objectResults.none { existingObject ->
-                                                existingObject.imageUri == null &&
-                                                        existingObject.detectedObject.labels.firstOrNull()?.text == newObject.labels.firstOrNull()?.text &&
-                                                        existingObject.detectedObject.boundingBox == newObject.boundingBox
-                                            }) {
-                                            objectResults.add(ScannedObject(newObject, null))
-                                        }
-                                    }
-
+                            detectedObjects = detectedObjectsForOverlay,
+                            imageSize = currentImageSize,
+                            onObjectsDetected = { objects, imageWidth, imageHeight ->
+                                viewModel.onObjectsDetected(objects, imageWidth, imageHeight)
+                                if (objects.isNotEmpty()) {
                                     coroutineScope.launch {
-                                        if (objects.isNotEmpty()) {
-                                            // Only partially expand if the sheet is currently hidden or collapsed
-                                            if (sheetScaffoldState.bottomSheetState.currentValue == SheetValue.Hidden) {
-                                                sheetScaffoldState.bottomSheetState.partialExpand()
-                                            }
+                                        // Only partially expand if the sheet is currently hidden or collapsed
+                                        if (sheetScaffoldState.bottomSheetState.currentValue == SheetValue.Hidden) {
+                                            sheetScaffoldState.bottomSheetState.partialExpand()
                                         }
                                     }
                                 }
-                                // Note: The imageSize is used internally by CameraPreviewObjectDetection
-                                // for the GraphicOverlay, so it's not directly needed here for objectResults list.
                             }
                         )
                     } else {
@@ -365,28 +295,25 @@ fun ObjectDetectionScreen(navController: NavHostController) {
 }
 
 @Composable
-fun CameraPreviewObjectDetection(
+private fun CameraPreview(
     modifier: Modifier = Modifier,
-    onObjectsDetected: (List<DetectedObject>, Size) -> Unit, // Modified: now also passes image size
-    cameraSelector: CameraSelector
+    cameraSelector: CameraSelector,
+    detectedObjects: List<DetectedObject>, // Passed from ViewModel
+    imageSize: Size, // Passed from ViewModel
+    onObjectsDetected: (List<DetectedObject>, Int, Int) -> Unit // Callback to ViewModel
 ) {
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
     val cameraExecutor = remember { Executors.newSingleThreadExecutor() }
     val cameraProviderFuture = remember { ProcessCameraProvider.getInstance(context) }
 
-    // State to hold the latest detected objects and image size for the overlay
-    var detectedObjectsForOverlay by remember { mutableStateOf<List<DetectedObject>>(emptyList()) }
-    var currentImageSize by remember { mutableStateOf(Size(1, 1)) } // Default to a small size
-
-    Box(modifier = modifier) { // Use Box to layer the preview and overlay
+    Box(modifier = modifier) {
         AndroidView(
-            modifier = Modifier.fillMaxSize(), // Fill the box
+            modifier = Modifier.fillMaxSize(),
             factory = { ctx ->
                 val previewView = PreviewView(ctx).apply {
-                    this.scaleType = PreviewView.ScaleType.FIT_CENTER
+                    this.scaleType = PreviewView.ScaleType.FIT_START
                 }
-                // Add listener to cameraProviderFuture to bind camera once available
                 cameraProviderFuture.addListener({
                     val cameraProvider = cameraProviderFuture.get()
 
@@ -400,29 +327,28 @@ fun CameraPreviewObjectDetection(
                         .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
                         .build()
                         .also {
-                            it.setAnalyzer(cameraExecutor, ObjectDetectorAnalyzer { objects, imageWidth, imageHeight -> // Modified: get image dimensions
-                                detectedObjectsForOverlay = objects
-                                currentImageSize = Size(imageWidth, imageHeight)
-                                onObjectsDetected(objects, Size(imageWidth, imageHeight)) // Pass to parent
-                            })
+                            it.setAnalyzer(cameraExecutor,
+                                ObjectDetectorAnalyzer { objects, imageWidth, imageHeight ->
+                                    onObjectsDetected(objects, imageWidth, imageHeight)
+                                })
                         }
 
                     try {
                         cameraProvider.unbindAll()
                         cameraProvider.bindToLifecycle(
                             lifecycleOwner,
-                            cameraSelector, // Use the passed cameraSelector here for initial binding
+                            cameraSelector,
                             preview,
                             imageAnalyzer
                         )
                     } catch (exc: Exception) {
                         Log.e("ObjectDetector", "Use case binding failed", exc)
                     }
-                }, ContextCompat.getMainExecutor(ctx)) // Use main executor for the listener
+                }, ContextCompat.getMainExecutor(ctx))
 
                 previewView
             },
-            update = { previewView -> // This block runs on recomposition when cameraSelector changes
+            update = { previewView ->
                 val cameraProvider = cameraProviderFuture.get()
 
                 // Unbind all use cases before rebinding
@@ -438,17 +364,16 @@ fun CameraPreviewObjectDetection(
                     .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
                     .build()
                     .also {
-                        it.setAnalyzer(cameraExecutor, ObjectDetectorAnalyzer { detectedObjects, imageWidth, imageHeight -> // Modified: get image dimensions
-                            detectedObjectsForOverlay = detectedObjects
-                            currentImageSize = Size(imageWidth, imageHeight)
-                            onObjectsDetected(detectedObjects, Size(imageWidth, imageHeight)) // Pass to parent
-                        })
+                        it.setAnalyzer(cameraExecutor,
+                            ObjectDetectorAnalyzer { detectedObjectsResult, imageWidth, imageHeight ->
+                                onObjectsDetected(detectedObjectsResult, imageWidth, imageHeight)
+                            })
                     }
 
                 try {
                     cameraProvider.bindToLifecycle(
                         lifecycleOwner,
-                        cameraSelector, // Use the updated cameraSelector
+                        cameraSelector,
                         preview,
                         imageAnalyzer
                     )
@@ -459,10 +384,9 @@ fun CameraPreviewObjectDetection(
             }
         )
 
-        // Draw the graphic overlay on top of the preview
         GraphicOverlay(
-            detectedObjects = detectedObjectsForOverlay,
-            imageSize = currentImageSize,
+            detectedObjects = detectedObjects,
+            imageSize = imageSize,
             modifier = Modifier.fillMaxSize()
         )
     }
@@ -476,12 +400,12 @@ fun CameraPreviewObjectDetection(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun BottomSheetContentObjects(objectResults: List<ScannedObject>, context: Context, onFlipCamera: () -> Unit) {
+private fun BottomSheetContentObjects(objectResults: List<ScannedObject>, context: Context, onFlipCamera: () -> Unit) {
     Column(
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = Dimens.PaddingMedium)
-            .background(MaterialTheme.colorScheme.background), // Ensure background for drag handle visibility
+            .background(MaterialTheme.colorScheme.background),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Row(
@@ -498,7 +422,7 @@ fun BottomSheetContentObjects(objectResults: List<ScannedObject>, context: Conte
                 overflow = TextOverflow.Ellipsis
             )
             IconButton(
-                onClick = onFlipCamera, // Call the onFlipCamera lambda
+                onClick = onFlipCamera,
                 modifier = Modifier.size(Dimens.IconSizeLarge)
             ) {
                 Icon(Icons.Rounded.FlipCameraIos, contentDescription = "Flip Camera")
@@ -515,12 +439,12 @@ fun BottomSheetContentObjects(objectResults: List<ScannedObject>, context: Conte
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
-            Spacer(modifier = Modifier.height(Dimens.PaddingMedium)) // Add some space if empty
+            Spacer(modifier = Modifier.height(Dimens.PaddingMedium))
         } else {
             LazyColumn(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .heightIn(max = Dimens.BarcodeListMaxHeight), // RE-ADDED this line
+                    .heightIn(max = Dimens.BarcodeListMaxHeight),
                 contentPadding = PaddingValues(vertical = Dimens.PaddingExtraSmall)
             ) {
                 itemsIndexed(objectResults) { index, scannedObject ->
@@ -532,8 +456,7 @@ fun BottomSheetContentObjects(objectResults: List<ScannedObject>, context: Conte
     }
 }
 
-class ObjectDetectorAnalyzer(private val listener: (List<DetectedObject>, Int, Int) -> Unit) : ImageAnalysis.Analyzer { // Modified listener signature
-    // Default object detector options
+class ObjectDetectorAnalyzer(private val listener: (List<DetectedObject>, Int, Int) -> Unit) : ImageAnalysis.Analyzer {
     private val options = ObjectDetectorOptions.Builder()
         .setDetectorMode(ObjectDetectorOptions.STREAM_MODE)
         .enableMultipleObjects()
@@ -542,7 +465,7 @@ class ObjectDetectorAnalyzer(private val listener: (List<DetectedObject>, Int, I
 
     private val objectDetector = ObjectDetection.getClient(options)
 
-    @androidx.annotation.OptIn(androidx.camera.core.ExperimentalGetImage::class)
+    @androidx.annotation.OptIn(ExperimentalGetImage::class)
     override fun analyze(imageProxy: ImageProxy) {
         val mediaImage = imageProxy.image
         if (mediaImage != null) {
@@ -550,81 +473,22 @@ class ObjectDetectorAnalyzer(private val listener: (List<DetectedObject>, Int, I
 
             objectDetector.process(image)
                 .addOnSuccessListener { detectedObjects ->
-                    // Pass image width and height
                     listener(detectedObjects, imageProxy.width, imageProxy.height)
                 }
                 .addOnFailureListener { e ->
                     Log.e("ObjectDetector", "Object detection failed: ${e.message}", e)
                 }
                 .addOnCompleteListener {
-                    imageProxy.close() // Always close the imageProxy
+                    imageProxy.close()
                 }
         } else {
-            imageProxy.close() // Always close the imageProxy even if mediaImage is null
-        }
-    }
-}
-
-suspend fun analyzeImageForObjects(
-    context: Context,
-    imageUri: Uri,
-    onResult: (List<ScannedObject>) -> Unit
-) {
-    withContext(Dispatchers.IO) {
-        try {
-            val bitmap: Bitmap? = try {
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
-                    val source = ImageDecoder.createSource(context.contentResolver, imageUri)
-                    ImageDecoder.decodeBitmap(source)
-                } else {
-                    @Suppress("DEPRECATION")
-                    MediaStore.Images.Media.getBitmap(context.contentResolver, imageUri)
-                }
-            } catch (e: Exception) {
-                Log.e("ObjectDetector", "Error decoding image: ${e.message}", e)
-                null
-            }
-
-            if (bitmap != null) {
-                val image = InputImage.fromBitmap(bitmap, 0)
-
-                // Default object detector options for image processing
-                val options = ObjectDetectorOptions.Builder()
-                    .setDetectorMode(ObjectDetectorOptions.SINGLE_IMAGE_MODE)
-                    .enableMultipleObjects()
-                    .enableClassification()
-                    .build()
-
-                val objectDetector = ObjectDetection.getClient(options)
-
-                objectDetector.process(image)
-                    .addOnSuccessListener { detectedObjects ->
-                        val scannedObjects = detectedObjects.map { ScannedObject(it, imageUri) }
-                        onResult(scannedObjects)
-                        if (detectedObjects.isEmpty()) {
-                            Toast.makeText(context, "No objects found in the selected image.", Toast.LENGTH_SHORT).show()
-                        }
-                    }
-                    .addOnFailureListener { e ->
-                        Log.e("ObjectDetector", "Image object detection failed: ${e.message}", e)
-                        Toast.makeText(context, "Error analyzing image: ${e.message}", Toast.LENGTH_SHORT).show()
-                    }
-            } else {
-                withContext(Dispatchers.Main) {
-                    Toast.makeText(context, "Failed to decode image from gallery.", Toast.LENGTH_SHORT).show()
-                }
-            }
-        } catch (e: Exception) {
-            Log.e("ObjectDetector", "Unexpected error: ${e.message}", e)
-            withContext(Dispatchers.Main) {
-                Toast.makeText(context, "Unexpected error: ${e.message}", Toast.LENGTH_SHORT).show()
-            }
+            imageProxy.close()
         }
     }
 }
 
 @Composable
-fun ObjectResultCard(scannedObject: ScannedObject, context: Context) {
+private fun ObjectResultCard(scannedObject: ScannedObject, context: Context) {
     val detectedObject = scannedObject.detectedObject
     val imageUri = scannedObject.imageUri
 
@@ -652,43 +516,27 @@ fun ObjectResultCard(scannedObject: ScannedObject, context: Context) {
     }
 }
 
-@androidx.compose.ui.tooling.preview.Preview(showBackground = true)
 @Composable
-fun ObjectDetectionScreenPreview() {
-    MLAppTheme {
-        ObjectDetectionScreen(navController = NavHostController(LocalContext.current))
-    }
-}
-
-@Composable
-private fun GraphicOverlay(
-    detectedObjects: List<DetectedObject>,
-    imageSize: Size,
-    modifier: Modifier = Modifier
-) {
+private fun GraphicOverlay(detectedObjects: List<DetectedObject>, imageSize: Size, modifier: Modifier = Modifier) {
     Canvas(modifier = modifier.fillMaxSize()) {
         if (imageSize.width <= 0 || imageSize.height <= 0) return@Canvas
 
-        // Calculate scale factors while maintaining aspect ratio
         val scaleFactor = min(
             size.width / imageSize.width.toFloat(),
             size.height / imageSize.height.toFloat()
         )
 
-        // Calculate offset to center the scaled image
         val offsetX = (size.width - imageSize.width * scaleFactor) / 2
         val offsetY = (size.height - imageSize.height * scaleFactor) / 2
 
         detectedObjects.forEach { detectedObject ->
             val boundingBox = detectedObject.boundingBox
 
-            // Scale and position the bounding box
             val left = boundingBox.left * scaleFactor + offsetX
             val top = boundingBox.top * scaleFactor + offsetY
             val right = boundingBox.right * scaleFactor + offsetX
             val bottom = boundingBox.bottom * scaleFactor + offsetY
 
-            // Draw the bounding box
             drawRect(
                 color = Color.White,
                 topLeft = Offset(left, top),
@@ -696,14 +544,12 @@ private fun GraphicOverlay(
                 style = Stroke(width = Dimens.DrawLineStrokeWidth)
             )
 
-            // Prepare label text
             val labelText = detectedObject.labels.firstOrNull()?.text ?: Constants.NOT_APPLICABLE
             val confidence = detectedObject.labels.firstOrNull()?.confidence?.let {
                 "%.1f%%".format(it * 100)
             } ?: Constants.NOT_APPLICABLE
             val fullText = "$labelText ($confidence)"
 
-            // Create text paint
             val textPaint = Paint().apply {
                 color = android.graphics.Color.BLACK
                 textSize = Dimens.DrawLabelTextSize
@@ -711,30 +557,25 @@ private fun GraphicOverlay(
                 isAntiAlias = true
             }
 
-            // Create background paint
             val bgPaint = Paint().apply {
                 color = android.graphics.Color.WHITE
                 style = Paint.Style.FILL
                 isAntiAlias = true
             }
 
-            // Calculate text position (just above the bounding box)
             val textX = left
-            val textY = top - 10f // 10 pixels above the box
+            val textY = top - 10f
 
-            // Measure text width
             val textWidth = textPaint.measureText(fullText)
 
-            // Draw text background (slightly larger than text)
             drawContext.canvas.nativeCanvas.drawRect(
                 textX - 5f,
-                textY - 50f, // Adjust based on text size
+                textY - 50f,
                 textX + textWidth + 5f,
                 textY + 5f,
                 bgPaint
             )
 
-            // Draw the text
             drawContext.canvas.nativeCanvas.drawText(
                 fullText,
                 textX,

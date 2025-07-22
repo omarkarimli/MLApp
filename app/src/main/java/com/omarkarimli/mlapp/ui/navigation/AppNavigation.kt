@@ -23,16 +23,16 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.omarkarimli.mlapp.ui.presentation.barcodescanning.BarcodeScanningScreen
-import com.omarkarimli.mlapp.ui.presentation.FaceMeshDetectionScreen
+import com.omarkarimli.mlapp.ui.presentation.facemeshdetection.FaceMeshDetectionScreen
 import com.omarkarimli.mycollab.ui.presentation.BookmarkScreen
 import com.omarkarimli.mlapp.ui.presentation.HomeScreen
-import com.omarkarimli.mlapp.ui.presentation.ImageLabelingScreen
+import com.omarkarimli.mlapp.ui.presentation.imagelabeling.ImageLabelingScreen
 import com.omarkarimli.mlapp.ui.presentation.LoginScreen
-import com.omarkarimli.mlapp.ui.presentation.ObjectDetectionScreen
+import com.omarkarimli.mlapp.ui.presentation.objectdetection.ObjectDetectionScreen
 import com.omarkarimli.mlapp.ui.presentation.OnboardingScreen
 import com.omarkarimli.mlapp.ui.presentation.SettingsScreen
 import com.omarkarimli.mlapp.ui.presentation.SplashScreen
-import com.omarkarimli.mlapp.ui.presentation.TextRecognitionScreen
+import com.omarkarimli.mlapp.ui.presentation.textrecognition.TextRecognitionScreen
 
 // Define a sealed class for bottom navigation destinations
 sealed class BottomBarDestination(

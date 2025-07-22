@@ -32,7 +32,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.lifecycle.compose.LocalLifecycleOwner
-import androidx.lifecycle.viewmodel.compose.viewModel // Import viewModel
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
 import com.google.mlkit.vision.barcode.common.Barcode
 import com.omarkarimli.mlapp.ui.navigation.Screen
@@ -184,7 +184,7 @@ fun BarcodeScanningScreen(navController: NavHostController) {
 }
 
 @Composable
-fun CameraPreview(modifier: Modifier = Modifier, onBarcodeDetected: (List<Barcode>) -> Unit, cameraSelector: CameraSelector) {
+private fun CameraPreview(modifier: Modifier = Modifier, onBarcodeDetected: (List<Barcode>) -> Unit, cameraSelector: CameraSelector) {
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
     val cameraExecutor = remember { Executors.newSingleThreadExecutor() }
@@ -215,7 +215,7 @@ fun CameraPreview(modifier: Modifier = Modifier, onBarcodeDetected: (List<Barcod
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun BottomSheetContent(barcodeResults: List<ScannedBarcode>, context: Context, onFlipCamera: () -> Unit) {
+private fun BottomSheetContent(barcodeResults: List<ScannedBarcode>, context: Context, onFlipCamera: () -> Unit) {
     Column(modifier = Modifier.fillMaxWidth().padding(horizontal = Dimens.PaddingMedium), horizontalAlignment = Alignment.CenterHorizontally) {
         Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
             Text("Detected Barcodes", modifier = Modifier.padding(bottom = Dimens.PaddingSmall), textAlign = TextAlign.Start, style = MaterialTheme.typography.titleLarge, maxLines = 1, overflow = TextOverflow.Ellipsis)
@@ -237,7 +237,7 @@ fun BottomSheetContent(barcodeResults: List<ScannedBarcode>, context: Context, o
 }
 
 @Composable
-fun BarcodeResultCard(scannedBarcode: ScannedBarcode, context: Context) {
+private fun BarcodeResultCard(scannedBarcode: ScannedBarcode, context: Context) {
     val barcode = scannedBarcode.barcode
     val imageUri = scannedBarcode.imageUri
     Row(modifier = Modifier.fillMaxWidth().padding(horizontal = Dimens.PaddingExtraSmall, vertical = Dimens.PaddingMedium), verticalAlignment = Alignment.CenterVertically) {
@@ -250,7 +250,7 @@ fun BarcodeResultCard(scannedBarcode: ScannedBarcode, context: Context) {
     }
 }
 
-fun getBarcodeFormatName(format: Int): String = when (format) {
+private fun getBarcodeFormatName(format: Int): String = when (format) {
     Barcode.FORMAT_AZTEC -> "AZTEC"
     Barcode.FORMAT_CODABAR -> "CODABAR"
     Barcode.FORMAT_CODE_39 -> "CODE_39"
@@ -268,7 +268,7 @@ fun getBarcodeFormatName(format: Int): String = when (format) {
     else -> "UNKNOWN"
 }
 
-fun getBarcodeValueTypeName(type: Int): String = when (type) {
+private fun getBarcodeValueTypeName(type: Int): String = when (type) {
     Barcode.TYPE_CONTACT_INFO -> "CONTACT_INFO"
     Barcode.TYPE_EMAIL -> "EMAIL"
     Barcode.TYPE_ISBN -> "ISBN"

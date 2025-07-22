@@ -1,23 +1,21 @@
-package com.omarkarimli.mlapp.ui.presentation
+package com.omarkarimli.mlapp.ui.presentation.facemeshdetection
 
 import android.Manifest
 import android.content.Context
-import android.content.pm.PackageManager
-import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.Color as GraphicsColor
-import android.graphics.ImageDecoder
 import android.graphics.Paint
 import android.net.Uri
 import android.os.Build
-import android.provider.MediaStore
 import android.util.AttributeSet
 import android.util.Log
+import android.util.Size
 import android.view.View
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.camera.core.CameraSelector
+import androidx.camera.core.ExperimentalGetImage
 import androidx.camera.core.ImageAnalysis
 import androidx.camera.core.ImageProxy
 import androidx.camera.core.Preview
@@ -64,12 +62,10 @@ import androidx.compose.material3.rememberStandardBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateListOf
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -79,6 +75,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.compose.LocalLifecycleOwner
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
 import com.google.mlkit.vision.common.InputImage
 import com.google.mlkit.vision.facemesh.FaceMesh
@@ -89,70 +86,78 @@ import com.omarkarimli.mlapp.ui.presentation.components.DetectedActionImage
 import com.omarkarimli.mlapp.ui.presentation.components.CameraPermissionPlaceholder
 import com.omarkarimli.mlapp.ui.theme.MLAppTheme
 import com.omarkarimli.mlapp.utils.Dimens
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import java.util.concurrent.Executors
 import kotlin.math.min
 
-// Data class to hold a DetectedFaceMesh and its associated image URI (if from a picked image)
-data class ScannedFaceMesh(
-    val faceMesh: FaceMesh,
-    val imageUri: Uri? = null // Nullable for live scans
-)
+@androidx.compose.ui.tooling.preview.Preview(showBackground = true)
+@Composable
+fun FaceMeshDetectionScreenPreview() {
+    MLAppTheme {
+        FaceMeshDetectionScreen(navController = NavHostController(LocalContext.current))
+    }
+}
+
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun FaceMeshDetectionScreen(navController: NavHostController) {
+fun FaceMeshDetectionScreen(navController: NavHostController, viewModel: FaceMeshDetectionViewModel = viewModel()) {
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
 
-    var hasCameraPermission by remember {
-        mutableStateOf(
-            ContextCompat.checkSelfPermission(
-                context,
-                Manifest.permission.CAMERA
-            ) == PackageManager.PERMISSION_GRANTED
-        )
-    }
+    val hasCameraPermission by viewModel.hasCameraPermission.collectAsState()
+    val hasStoragePermission by viewModel.hasStoragePermission.collectAsState()
+    val faceMeshResults = viewModel.faceMeshResults // This is already a mutableStateListOf
+    val cameraSelector by viewModel.cameraSelector.collectAsState()
+    val detectedFaceMeshesForOverlay by viewModel.detectedFaceMeshesForOverlay.collectAsState()
+    val imageSizeForOverlay by viewModel.imageSizeForOverlay.collectAsState()
 
-    var hasStoragePermission by remember {
-        mutableStateOf(
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                ContextCompat.checkSelfPermission(
-                    context,
-                    Manifest.permission.READ_MEDIA_IMAGES
-                ) == PackageManager.PERMISSION_GRANTED
-            } else {
-                ContextCompat.checkSelfPermission(
-                    context,
-                    Manifest.permission.READ_EXTERNAL_STORAGE
-                ) == PackageManager.PERMISSION_GRANTED
-            }
+
+    val sheetScaffoldState = rememberBottomSheetScaffoldState(
+        bottomSheetState = rememberStandardBottomSheetState(
+            initialValue = SheetValue.PartiallyExpanded,
+            skipHiddenState = true
         )
+    )
+
+    // Collect Toast messages from ViewModel
+    LaunchedEffect(Unit) {
+        viewModel.toastMessage.collect { message ->
+            Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
+        }
     }
 
     val cameraPermissionLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestPermission(),
         onResult = { isGranted ->
-            hasCameraPermission = isGranted
-            if (!isGranted) {
-                Toast.makeText(context, "Camera permission is required for live detection.", Toast.LENGTH_SHORT).show()
-            }
+            viewModel.updateCameraPermission(isGranted)
         }
     )
 
     val storagePermissionLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestPermission(),
         onResult = { isGranted ->
-            hasStoragePermission = isGranted
-            if (!isGranted) {
-                Toast.makeText(context, "Storage permission is required to pick photos.", Toast.LENGTH_SHORT).show()
+            viewModel.updateStoragePermission(isGranted)
+        }
+    )
+
+    val pickImageLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetContent(),
+        onResult = { uri: Uri? ->
+            viewModel.onImagePicked(context, uri)
+            // Expand sheet if results are available from picked image
+            if (faceMeshResults.any { it.imageUri != null }) { // Check if there are results specifically from picked images
+                coroutineScope.launch {
+                    if (sheetScaffoldState.bottomSheetState.currentValue != SheetValue.Expanded) {
+                        sheetScaffoldState.bottomSheetState.expand()
+                    }
+                }
             }
         }
     )
 
     LaunchedEffect(Unit) {
+        // Initial permission requests
         if (!hasCameraPermission) {
             cameraPermissionLauncher.launch(Manifest.permission.CAMERA)
         }
@@ -164,49 +169,6 @@ fun FaceMeshDetectionScreen(navController: NavHostController) {
             }
         }
     }
-
-    val faceMeshResults = remember { mutableStateListOf<ScannedFaceMesh>() }
-
-    val sheetScaffoldState = rememberBottomSheetScaffoldState(
-        bottomSheetState = rememberStandardBottomSheetState(
-            initialValue = SheetValue.PartiallyExpanded,
-            skipHiddenState = true
-        )
-    )
-
-    val pickImageLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.GetContent(),
-        onResult = { uri: Uri? ->
-            uri?.let {
-                coroutineScope.launch {
-                    analyzeImageForFaceMeshes(context, it) { results ->
-                        // Clear existing live scan results when a new image is picked
-                        faceMeshResults.removeAll { scannedFaceMesh -> scannedFaceMesh.imageUri == null }
-
-                        results.forEach { newScannedFaceMesh ->
-                            // Simple check to avoid duplicates for now, based on bounding box
-                            if (faceMeshResults.none { prevScannedFaceMesh ->
-                                    prevScannedFaceMesh.faceMesh.boundingBox == newScannedFaceMesh.faceMesh.boundingBox && prevScannedFaceMesh.imageUri == newScannedFaceMesh.imageUri
-                                }) {
-                                faceMeshResults.add(newScannedFaceMesh)
-                            }
-                        }
-                        if (results.isNotEmpty()) {
-                            coroutineScope.launch {
-                                // Only expand if the sheet is not already expanded or hidden
-                                if (sheetScaffoldState.bottomSheetState.currentValue != SheetValue.Expanded) {
-                                    sheetScaffoldState.bottomSheetState.expand()
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        }
-    )
-
-    // State to hold the current camera selector (front or back)
-    var cameraSelector by remember { mutableStateOf(CameraSelector.DEFAULT_BACK_CAMERA) }
 
     Scaffold(
         topBar = {
@@ -257,9 +219,7 @@ fun FaceMeshDetectionScreen(navController: NavHostController) {
                     }
                     Spacer(Modifier.size(Dimens.SpacerSmall))
                     FilledTonalIconButton(
-                        onClick = { /* TODO: Implement save functionality for detected face meshes */
-                            Toast.makeText(context, "Save functionality not implemented yet.", Toast.LENGTH_SHORT).show()
-                        },
+                        onClick = { viewModel.onSaveClicked() },
                         modifier = Modifier
                             .width(Dimens.IconSizeExtraLarge)
                             .height(Dimens.IconSizeLarge),
@@ -290,14 +250,7 @@ fun FaceMeshDetectionScreen(navController: NavHostController) {
                     faceMeshResults = faceMeshResults,
                     context = context,
                     onFlipCamera = {
-                        // Toggle camera selector
-                        cameraSelector = if (cameraSelector == CameraSelector.DEFAULT_BACK_CAMERA) {
-                            Log.e("FaceMeshDetectionScreen", "Switching to front camera")
-                            CameraSelector.DEFAULT_FRONT_CAMERA
-                        } else {
-                            Log.e("FaceMeshDetectionScreen", "Switching to back camera")
-                            CameraSelector.DEFAULT_BACK_CAMERA
-                        }
+                        viewModel.onFlipCamera()
                     }
                 )
             },
@@ -308,35 +261,20 @@ fun FaceMeshDetectionScreen(navController: NavHostController) {
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
                     if (hasCameraPermission) {
-                        CameraPreviewFaceMeshDetection(
+                        CameraPreview(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .weight(1f)
                                 .background(Color.Black, RoundedCornerShape(Dimens.CornerRadiusMedium)),
                             cameraSelector = cameraSelector,
-                            onFaceMeshesDetected = { faceMeshes ->
-                                // Filter out live scan results, then add new ones
-                                val currentLiveFaceMeshes = faceMeshResults.filter { it.imageUri == null }.map { it.faceMesh.boundingBox }.toSet()
-                                val newLiveFaceMeshes = faceMeshes.map { it.boundingBox }.toSet()
-
-                                if (newLiveFaceMeshes != currentLiveFaceMeshes) {
-                                    faceMeshResults.removeAll { it.imageUri == null } // Remove old live scan results
-                                    faceMeshes.forEach { newFaceMesh ->
-                                        // Only add if it's genuinely new to the live scan list
-                                        if (faceMeshResults.none { existingFaceMesh ->
-                                                existingFaceMesh.imageUri == null &&
-                                                        existingFaceMesh.faceMesh.boundingBox == newFaceMesh.boundingBox
-                                            }) {
-                                            faceMeshResults.add(ScannedFaceMesh(newFaceMesh, null))
-                                        }
-                                    }
-
+                            detectedFaceMeshes = detectedFaceMeshesForOverlay, // Pass data for overlay
+                            imageSize = imageSizeForOverlay, // Pass image size for overlay
+                            onFaceMeshesDetected = { faceMeshes, imageWidth, imageHeight ->
+                                viewModel.onFaceMeshesDetected(faceMeshes, imageWidth, imageHeight)
+                                if (faceMeshes.isNotEmpty()) {
                                     coroutineScope.launch {
-                                        if (faceMeshes.isNotEmpty()) {
-                                            // Only partially expand if the sheet is currently hidden or collapsed
-                                            if (sheetScaffoldState.bottomSheetState.currentValue == SheetValue.Hidden) {
-                                                sheetScaffoldState.bottomSheetState.partialExpand()
-                                            }
+                                        if (sheetScaffoldState.bottomSheetState.currentValue == SheetValue.Hidden) {
+                                            sheetScaffoldState.bottomSheetState.partialExpand()
                                         }
                                     }
                                 }
@@ -356,7 +294,7 @@ fun FaceMeshDetectionScreen(navController: NavHostController) {
     }
 }
 
-class GraphicOverlay @JvmOverloads constructor(context: Context, attrs: AttributeSet? = null, defStyleAttr: Int = 0) : View(context, attrs, defStyleAttr) {
+private class GraphicOverlay @JvmOverloads constructor(context: Context, attrs: AttributeSet? = null, defStyleAttr: Int = 0) : View(context, attrs, defStyleAttr) {
 
     private val graphics = mutableListOf<Graphic>()
     private var scaleFactor = 1f
@@ -424,7 +362,7 @@ class GraphicOverlay @JvmOverloads constructor(context: Context, attrs: Attribut
     }
 }
 
-class FaceMeshGraphic(overlay: GraphicOverlay, private val faceMesh: FaceMesh, private val isFrontCamera: Boolean) : GraphicOverlay.Graphic(overlay) {
+private class FaceMeshGraphic(overlay: GraphicOverlay, private val faceMesh: FaceMesh, private val isFrontCamera: Boolean) : GraphicOverlay.Graphic(overlay) {
 
     private val meshPaint = Paint().apply {
         color = GraphicsColor.WHITE
@@ -483,7 +421,13 @@ class FaceMeshGraphic(overlay: GraphicOverlay, private val faceMesh: FaceMesh, p
 }
 
 @Composable
-fun CameraPreviewFaceMeshDetection(modifier: Modifier = Modifier, onFaceMeshesDetected: (List<FaceMesh>) -> Unit, cameraSelector: CameraSelector) {
+private fun CameraPreview(
+    modifier: Modifier = Modifier,
+    onFaceMeshesDetected: (List<FaceMesh>, Int, Int) -> Unit, // Added imageWidth, imageHeight to callback
+    cameraSelector: CameraSelector,
+    detectedFaceMeshes: List<FaceMesh>, // Data for the overlay from ViewModel
+    imageSize: Size // Image size for the overlay from ViewModel
+) {
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
     val cameraExecutor = remember { Executors.newSingleThreadExecutor() }
@@ -492,14 +436,23 @@ fun CameraPreviewFaceMeshDetection(modifier: Modifier = Modifier, onFaceMeshesDe
     // State for the GraphicOverlay
     val graphicOverlay = remember { GraphicOverlay(context) }
 
-    Box(modifier = modifier) { // Use Box to layer PreviewView and GraphicOverlay
+    // Update GraphicOverlay when detectedFaceMeshes or imageSize changes
+    LaunchedEffect(detectedFaceMeshes, imageSize, cameraSelector) {
+        graphicOverlay.clear()
+        graphicOverlay.setImageSourceInfo(imageSize.width, imageSize.height)
+        detectedFaceMeshes.forEach { faceMesh ->
+            graphicOverlay.add(FaceMeshGraphic(graphicOverlay, faceMesh, cameraSelector == CameraSelector.DEFAULT_FRONT_CAMERA))
+        }
+        graphicOverlay.postInvalidate() // Request redraw for the overlay
+    }
+
+    Box(modifier = modifier) {
         AndroidView(
-            modifier = Modifier.fillMaxSize(), // Fill the entire Box
+            modifier = Modifier.fillMaxSize(),
             factory = { ctx ->
                 val previewView = PreviewView(ctx).apply {
-                    this.scaleType = PreviewView.ScaleType.FIT_START // FILL_CENTER
+                    this.scaleType = PreviewView.ScaleType.FIT_START
                 }
-                // Add listener to cameraProviderFuture to bind camera once available
                 cameraProviderFuture.addListener({
                     val cameraProvider = cameraProviderFuture.get()
 
@@ -510,24 +463,11 @@ fun CameraPreviewFaceMeshDetection(modifier: Modifier = Modifier, onFaceMeshesDe
                         }
 
                     val imageAnalyzer = ImageAnalysis.Builder()
-//                        .setResolutionSelector(
-//                            ResolutionSelector.Builder()
-//                                .setAspectRatioStrategy(AspectRatioStrategy.RATIO_4_3_FALLBACK_AUTO_STRATEGY)
-//                                .build()
-//                        )
                         .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
                         .build()
                         .also {
                             it.setAnalyzer(cameraExecutor, FaceMeshDetectorAnalyzer { faceMeshes, imageWidth, imageHeight ->
-                                // Update the GraphicOverlay with detected meshes and image info
-                                graphicOverlay.clear()
-                                graphicOverlay.setImageSourceInfo(imageWidth, imageHeight)
-                                faceMeshes.forEach { faceMesh ->
-                                    graphicOverlay.add(FaceMeshGraphic(graphicOverlay, faceMesh, cameraSelector == CameraSelector.DEFAULT_FRONT_CAMERA))
-                                }
-                                graphicOverlay.postInvalidate() // Request redraw for the overlay
-
-                                onFaceMeshesDetected(faceMeshes) // Still pass to the parent composable
+                                onFaceMeshesDetected(faceMeshes, imageWidth, imageHeight)
                             })
                         }
 
@@ -535,18 +475,18 @@ fun CameraPreviewFaceMeshDetection(modifier: Modifier = Modifier, onFaceMeshesDe
                         cameraProvider.unbindAll()
                         cameraProvider.bindToLifecycle(
                             lifecycleOwner,
-                            cameraSelector, // Use the initial cameraSelector
+                            cameraSelector,
                             preview,
                             imageAnalyzer
                         )
                     } catch (exc: Exception) {
                         Log.e("FaceMeshDetector", "Use case binding failed", exc)
                     }
-                }, ContextCompat.getMainExecutor(ctx)) // Use main executor for the listener
+                }, ContextCompat.getMainExecutor(ctx))
 
                 previewView
             },
-            update = { previewView -> // This block runs on recomposition when cameraSelector changes
+            update = { previewView ->
                 val cameraProvider = cameraProviderFuture.get()
 
                 // Unbind all use cases before rebinding
@@ -563,21 +503,14 @@ fun CameraPreviewFaceMeshDetection(modifier: Modifier = Modifier, onFaceMeshesDe
                     .build()
                     .also {
                         it.setAnalyzer(cameraExecutor, FaceMeshDetectorAnalyzer { faceMeshes, imageWidth, imageHeight ->
-                            graphicOverlay.clear()
-                            graphicOverlay.setImageSourceInfo(imageWidth, imageHeight)
-                            faceMeshes.forEach { faceMesh ->
-                                graphicOverlay.add(FaceMeshGraphic(graphicOverlay, faceMesh, cameraSelector == CameraSelector.DEFAULT_FRONT_CAMERA))
-                            }
-                            graphicOverlay.postInvalidate()
-
-                            onFaceMeshesDetected(faceMeshes)
+                            onFaceMeshesDetected(faceMeshes, imageWidth, imageHeight)
                         })
                     }
 
                 try {
                     cameraProvider.bindToLifecycle(
                         lifecycleOwner,
-                        cameraSelector, // Use the updated cameraSelector
+                        cameraSelector,
                         preview,
                         imageAnalyzer
                     )
@@ -591,7 +524,7 @@ fun CameraPreviewFaceMeshDetection(modifier: Modifier = Modifier, onFaceMeshesDe
         // Add the GraphicOverlay on top of the PreviewView
         AndroidView(
             modifier = Modifier.fillMaxSize(),
-            factory = { graphicOverlay } // Directly use the remembered graphicOverlay instance
+            factory = { graphicOverlay }
         )
     }
 
@@ -604,12 +537,12 @@ fun CameraPreviewFaceMeshDetection(modifier: Modifier = Modifier, onFaceMeshesDe
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun BottomSheetContentFaceMeshes(faceMeshResults: List<ScannedFaceMesh>, context: Context, onFlipCamera: () -> Unit) {
+private fun BottomSheetContentFaceMeshes(faceMeshResults: List<ScannedFaceMesh>, context: Context, onFlipCamera: () -> Unit) {
     Column(
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = Dimens.PaddingMedium)
-            .background(MaterialTheme.colorScheme.background), // Ensure background for drag handle visibility
+            .background(MaterialTheme.colorScheme.background),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Row(
@@ -643,12 +576,12 @@ fun BottomSheetContentFaceMeshes(faceMeshResults: List<ScannedFaceMesh>, context
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
-            Spacer(modifier = Modifier.height(Dimens.PaddingMedium)) // Add some space if empty
+            Spacer(modifier = Modifier.height(Dimens.PaddingMedium))
         } else {
             LazyColumn(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .heightIn(max = Dimens.BarcodeListMaxHeight), // RE-ADDED this line
+                    .heightIn(max = Dimens.BarcodeListMaxHeight),
                 contentPadding = PaddingValues(vertical = Dimens.PaddingExtraSmall)
             ) {
                 itemsIndexed(faceMeshResults) { index, scannedFaceMesh ->
@@ -661,12 +594,10 @@ fun BottomSheetContentFaceMeshes(faceMeshResults: List<ScannedFaceMesh>, context
 }
 
 class FaceMeshDetectorAnalyzer(private val listener: (List<FaceMesh>, Int, Int) -> Unit) : ImageAnalysis.Analyzer {
-    // Default face mesh detector options
-    private val options = FaceMeshDetectorOptions.Builder().build() // Default options are sufficient for most cases
-
+    private val options = FaceMeshDetectorOptions.Builder().build()
     private val faceMeshDetector = FaceMeshDetection.getClient(options)
 
-    @androidx.annotation.OptIn(androidx.camera.core.ExperimentalGetImage::class)
+    @androidx.annotation.OptIn(ExperimentalGetImage::class)
     override fun analyze(imageProxy: ImageProxy) {
         val mediaImage = imageProxy.image
         if (mediaImage != null) {
@@ -675,84 +606,26 @@ class FaceMeshDetectorAnalyzer(private val listener: (List<FaceMesh>, Int, Int) 
             val imageWidth = image.width
             val imageHeight = image.height
 
-            // val imageWidth = imageProxy.width
-            // val imageHeight = imageProxy.height
-
             faceMeshDetector.process(image)
                 .addOnSuccessListener { faceMeshes ->
-                    // Only invoke listener if faceMeshes are non-empty to avoid unnecessary recompositions
-                    if (faceMeshes.isNotEmpty()) {
-                        listener(faceMeshes, imageWidth, imageHeight)
-                    } else {
-                        // Still pass dimensions even if no meshes detected, might be useful for layout
-                        listener(emptyList(), imageWidth, imageHeight)
-                    }
+                    // Always invoke listener to update UI for overlay, even if empty list
+                    listener(faceMeshes, imageWidth, imageHeight)
                 }
                 .addOnFailureListener { e ->
                     Log.e("FaceMeshDetector", "Face mesh detection failed: ${e.message}", e)
                     listener(emptyList(), imageWidth, imageHeight) // Pass empty list on failure
                 }
                 .addOnCompleteListener {
-                    imageProxy.close() // Always close the imageProxy
+                    imageProxy.close()
                 }
         } else {
-            imageProxy.close() // Always close the imageProxy even if mediaImage is null
-        }
-    }
-}
-
-suspend fun analyzeImageForFaceMeshes(context: Context, imageUri: Uri, onResult: (List<ScannedFaceMesh>) -> Unit) {
-    withContext(Dispatchers.IO) {
-        try {
-            val bitmap: Bitmap? = try {
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
-                    val source = ImageDecoder.createSource(context.contentResolver, imageUri)
-                    ImageDecoder.decodeBitmap(source)
-                } else {
-                    @Suppress("DEPRECATION")
-                    MediaStore.Images.Media.getBitmap(context.contentResolver, imageUri)
-                }
-            } catch (e: Exception) {
-                Log.e("FaceMeshDetector", "Error decoding image: ${e.message}", e)
-                null
-            }
-
-            if (bitmap != null) {
-                val image = InputImage.fromBitmap(bitmap, 0)
-
-                // Face mesh detector options for image processing
-                val options = FaceMeshDetectorOptions.Builder().build() // Default options for single image
-
-                val faceMeshDetector = FaceMeshDetection.getClient(options)
-
-                faceMeshDetector.process(image)
-                    .addOnSuccessListener { faceMeshes ->
-                        val scannedFaceMeshes = faceMeshes.map { ScannedFaceMesh(it, imageUri) }
-                        onResult(scannedFaceMeshes)
-                        if (faceMeshes.isEmpty()) {
-                            Toast.makeText(context, "No face meshes found in the selected image.", Toast.LENGTH_SHORT).show()
-                        }
-                    }
-                    .addOnFailureListener { e ->
-                        Log.e("FaceMeshDetector", "Image face mesh detection failed: ${e.message}", e)
-                        Toast.makeText(context, "Error analyzing image: ${e.message}", Toast.LENGTH_SHORT).show()
-                    }
-            } else {
-                withContext(Dispatchers.Main) {
-                    Toast.makeText(context, "Failed to decode image from gallery.", Toast.LENGTH_SHORT).show()
-                }
-            }
-        } catch (e: Exception) {
-            Log.e("FaceMeshDetector", "Unexpected error: ${e.message}", e)
-            withContext(Dispatchers.Main) {
-                Toast.makeText(context, "Unexpected error: ${e.message}", Toast.LENGTH_SHORT).show()
-            }
+            imageProxy.close()
         }
     }
 }
 
 @Composable
-fun FaceMeshResultCard(scannedFaceMesh: ScannedFaceMesh, context: Context) {
+private fun FaceMeshResultCard(scannedFaceMesh: ScannedFaceMesh, context: Context) {
     val faceMesh = scannedFaceMesh.faceMesh
     val imageUri = scannedFaceMesh.imageUri
 
@@ -768,20 +641,8 @@ fun FaceMeshResultCard(scannedFaceMesh: ScannedFaceMesh, context: Context) {
             Text(text = "Bounding Box: ${faceMesh.boundingBox}", style = MaterialTheme.typography.bodySmall, color = Color.Gray)
             Text(text = "Number of Points: ${faceMesh.allPoints.size}", style = MaterialTheme.typography.bodyLarge)
             // You can add more details about face mesh here, e.g., specific contours
-            // For example, if you want to show details about specific contours:
-            // faceMesh.getContour(FaceMesh.FACE_OVAL)?.points?.size?.let {
-            //     Text(text = "Face Oval Points: $it", style = MaterialTheme.typography.bodyMedium)
-            // }
         }
 
         DetectedActionImage(context, imageUri)
-    }
-}
-
-@androidx.compose.ui.tooling.preview.Preview(showBackground = true)
-@Composable
-fun FaceMeshDetectionScreenPreview() {
-    MLAppTheme {
-        FaceMeshDetectionScreen(navController = NavHostController(LocalContext.current))
     }
 }

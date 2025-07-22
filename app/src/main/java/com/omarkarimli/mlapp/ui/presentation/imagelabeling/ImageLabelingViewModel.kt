@@ -1,4 +1,4 @@
-package com.omarkarimli.mlapp.ui.presentation
+package com.omarkarimli.mlapp.ui.presentation.imagelabeling
 
 import android.Manifest
 import android.content.Context
@@ -9,7 +9,6 @@ import android.net.Uri
 import android.os.Build
 import android.provider.MediaStore
 import android.util.Log
-import android.widget.Toast
 import androidx.activity.result.ActivityResultLauncher
 import androidx.camera.core.CameraSelector
 import androidx.core.content.ContextCompat
@@ -19,14 +18,12 @@ import com.google.mlkit.vision.common.InputImage
 import com.google.mlkit.vision.label.ImageLabel
 import com.google.mlkit.vision.label.ImageLabeling
 import com.google.mlkit.vision.label.defaults.ImageLabelerOptions
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 
 // Data class to hold an ImageLabel and its associated image URI (if from a picked image)
 data class ImageLabelResult(
@@ -90,8 +87,7 @@ class ImageLabelingViewModel : ViewModel() {
         }
     }
 
-    // CHANGE: Accepts Context parameter
-    fun requestPermissions(context: Context, cameraPermissionLauncher: ActivityResultLauncher<String>, storagePermissionLauncher: ActivityResultLauncher<String>) {
+    fun requestPermissions(cameraPermissionLauncher: ActivityResultLauncher<String>, storagePermissionLauncher: ActivityResultLauncher<String>) {
         if (!hasCameraPermission.value) {
             cameraPermissionLauncher.launch(Manifest.permission.CAMERA)
         }
@@ -128,11 +124,11 @@ class ImageLabelingViewModel : ViewModel() {
 
                     labeler.process(image)
                         .addOnSuccessListener { labels ->
-                            val newLabelResults = labels.map { ImageLabelResult(it, uri) }
+                            val newLabelResults = labels.map { prevInstance -> ImageLabelResult(prevInstance, uri) }
                             if (newLabelResults.isNotEmpty()) {
                                 _imageLabelResults.update { currentList ->
                                     // Remove existing picked image results for this URI to avoid duplicates when re-picking same image
-                                    val filteredList = currentList.filter { it.imageUri != uri }.toMutableList()
+                                    val filteredList = currentList.filter { currentInstance -> currentInstance.imageUri != uri }.toMutableList()
                                     // Add new labels, ensuring no exact duplicates from this specific URI
                                     newLabelResults.forEach { newLabel ->
                                         if (filteredList.none { existingLabel -> existingLabel.label.text == newLabel.label.text && existingLabel.imageUri == newLabel.imageUri }) {
