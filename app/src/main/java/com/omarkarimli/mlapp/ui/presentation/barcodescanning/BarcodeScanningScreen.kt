@@ -9,6 +9,7 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.camera.core.CameraSelector
 import androidx.camera.core.ImageAnalysis
+import androidx.camera.core.ImageProxy
 import androidx.camera.core.Preview
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.camera.view.PreviewView
@@ -170,7 +171,8 @@ fun BarcodeScanningScreen(navController: NavHostController) {
                         CameraPreview(
                             modifier = Modifier.fillMaxWidth().weight(1f).padding(horizontal = Dimens.PaddingMedium).background(Color.Black, RoundedCornerShape(Dimens.CornerRadiusMedium)),
                             cameraSelector = cameraSelector,
-                            onBarcodeDetected = { barcodes -> viewModel.onBarcodeDetected(barcodes) }
+                            // This is still used by the VM internally
+                            analyzeLiveBarcode = { imageProxy -> viewModel.analyzeLiveBarcode(imageProxy) } // Pass the new method
                         )
                     } else {
                         CameraPermissionPlaceholder(
@@ -184,7 +186,7 @@ fun BarcodeScanningScreen(navController: NavHostController) {
 }
 
 @Composable
-private fun CameraPreview(modifier: Modifier = Modifier, onBarcodeDetected: (List<Barcode>) -> Unit, cameraSelector: CameraSelector) {
+private fun CameraPreview(modifier: Modifier = Modifier, cameraSelector: CameraSelector, analyzeLiveBarcode: (ImageProxy) -> Unit) {
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
     val cameraExecutor = remember { Executors.newSingleThreadExecutor() }
@@ -198,8 +200,10 @@ private fun CameraPreview(modifier: Modifier = Modifier, onBarcodeDetected: (Lis
             cameraProvider.unbindAll()
             val preview = Preview.Builder().build().also { it.surfaceProvider = previewView.surfaceProvider }
             val imageAnalyzer = ImageAnalysis.Builder().setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST).build().also {
-                it.setAnalyzer(cameraExecutor,
-                    BarcodeAnalyzer { barcodes -> onBarcodeDetected(barcodes) })
+                // Now pass the ViewModel's method directly
+                it.setAnalyzer(cameraExecutor) { imageProxy ->
+                    analyzeLiveBarcode(imageProxy) // Call the ViewModel's analysis method
+                }
             }
             try {
                 cameraProvider.bindToLifecycle(lifecycleOwner, cameraSelector, preview, imageAnalyzer)

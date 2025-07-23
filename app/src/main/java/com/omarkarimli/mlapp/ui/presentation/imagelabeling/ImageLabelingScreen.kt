@@ -9,7 +9,6 @@ import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.camera.core.CameraSelector
-import androidx.camera.core.ExperimentalGetImage
 import androidx.camera.core.ImageAnalysis
 import androidx.camera.core.ImageProxy
 import androidx.camera.core.Preview
@@ -67,12 +66,8 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.compose.LocalLifecycleOwner
-import androidx.lifecycle.viewmodel.compose.viewModel // Only default viewModel() import needed
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
-import com.google.mlkit.vision.common.InputImage
-import com.google.mlkit.vision.label.ImageLabel
-import com.google.mlkit.vision.label.ImageLabeling
-import com.google.mlkit.vision.label.defaults.ImageLabelerOptions
 import com.omarkarimli.mlapp.ui.navigation.Screen
 import com.omarkarimli.mlapp.ui.presentation.components.DetectedActionImage
 import com.omarkarimli.mlapp.ui.presentation.components.CameraPermissionPlaceholder
@@ -85,7 +80,7 @@ import java.util.concurrent.Executors
 fun ImageLabelingScreen(navController: NavHostController) {
     val context = LocalContext.current
 
-    val viewModel: ImageLabelingViewModel = viewModel()
+    val viewModel: ImageLabelingViewModel = viewModel() // Get the ViewModel instance
 
     val hasCameraPermission by viewModel.hasCameraPermission.collectAsState()
     val hasStoragePermission by viewModel.hasStoragePermission.collectAsState()
@@ -104,15 +99,11 @@ fun ImageLabelingScreen(navController: NavHostController) {
 
     val pickImageLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent(),
-        // CHANGE: Pass context to analyzeImageFromUri
         onResult = { uri: Uri? -> viewModel.analyzeImageFromUri(context, uri) }
     )
 
     LaunchedEffect(Unit) {
-        // CHANGE: Call initializePermissions with context
         viewModel.initializePermissions(context)
-
-        // CHANGE: Call requestPermissions with context
         viewModel.requestPermissions(cameraPermissionLauncher, storagePermissionLauncher)
 
         viewModel.toastMessage.collect { message ->
@@ -227,7 +218,8 @@ fun ImageLabelingScreen(navController: NavHostController) {
                                 .weight(1f)
                                 .background(Color.Black, RoundedCornerShape(Dimens.CornerRadiusMedium)),
                             cameraSelector = cameraSelector,
-                            onLabelsDetected = viewModel::onLiveLabelsDetected
+                            // Pass the ViewModel's analyzeImageProxy function directly
+                            onImageProxyAnalyzed = viewModel::analyzeImageProxy
                         )
                     } else {
                         CameraPermissionPlaceholder(
@@ -244,7 +236,12 @@ fun ImageLabelingScreen(navController: NavHostController) {
 }
 
 @Composable
-private fun CameraPreview(modifier: Modifier = Modifier, onLabelsDetected: (List<ImageLabel>) -> Unit, cameraSelector: CameraSelector) {
+private fun CameraPreview(
+    modifier: Modifier = Modifier,
+    // Change the parameter type to accept a function that takes ImageProxy
+    onImageProxyAnalyzed: (ImageProxy) -> Unit,
+    cameraSelector: CameraSelector
+) {
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
     val cameraExecutor = remember { Executors.newSingleThreadExecutor() }
@@ -270,22 +267,22 @@ private fun CameraPreview(modifier: Modifier = Modifier, onLabelsDetected: (List
                     .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
                     .build()
                     .also {
-                        it.setAnalyzer(cameraExecutor, ImageLabelAnalyzer { labels ->
-                            onLabelsDetected(labels)
-                        })
+                        // Pass the ViewModel's analyzeImageProxy directly to the analyzer's setAnalyzer
+                        it.setAnalyzer(cameraExecutor) { imageProxy ->
+                            onImageProxyAnalyzed(imageProxy)
+                        }
                     }
 
                 try {
                     cameraProvider.unbindAll()
                     cameraProvider.bindToLifecycle(
                         lifecycleOwner,
-                        cameraSelector, // Use the provided cameraSelector
+                        cameraSelector,
                         preview,
                         imageAnalyzer
                     )
                 } catch (exc: Exception) {
                     Log.e("ImageLabeler", "Use case binding failed", exc)
-                    // Toast.makeText(context, "Error setting up camera: ${exc.message}", Toast.LENGTH_SHORT).show()
                 }
             }, ContextCompat.getMainExecutor(ctx))
 
@@ -306,9 +303,10 @@ private fun CameraPreview(modifier: Modifier = Modifier, onLabelsDetected: (List
                 .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
                 .build()
                 .also {
-                    it.setAnalyzer(cameraExecutor, ImageLabelAnalyzer { imageLabels ->
-                        onLabelsDetected(imageLabels)
-                    })
+                    // Pass the ViewModel's analyzeImageProxy directly to the analyzer's setAnalyzer
+                    it.setAnalyzer(cameraExecutor) { imageProxy ->
+                        onImageProxyAnalyzed(imageProxy)
+                    }
                 }
 
             try {
@@ -386,33 +384,6 @@ private fun BottomSheetContentImageLabel(imageLabelResults: List<ImageLabelResul
                     if (index < imageLabelResults.lastIndex) HorizontalDivider()
                 }
             }
-        }
-    }
-}
-
-class ImageLabelAnalyzer(private val listener: (List<ImageLabel>) -> Unit) : ImageAnalysis.Analyzer {
-    private val labeler = ImageLabeling.getClient(ImageLabelerOptions.DEFAULT_OPTIONS)
-
-    @androidx.annotation.OptIn(ExperimentalGetImage::class)
-    override fun analyze(imageProxy: ImageProxy) {
-        val mediaImage = imageProxy.image
-        if (mediaImage != null) {
-            val image = InputImage.fromMediaImage(mediaImage, imageProxy.imageInfo.rotationDegrees)
-
-            labeler.process(image)
-                .addOnSuccessListener { labels ->
-                    if (labels.isNotEmpty()) {
-                        listener(labels)
-                    }
-                }
-                .addOnFailureListener { e ->
-                    Log.e("ImageLabeler", "Image labeling failed: ${e.message}", e)
-                }
-                .addOnCompleteListener {
-                    imageProxy.close()
-                }
-        } else {
-            imageProxy.close()
         }
     }
 }

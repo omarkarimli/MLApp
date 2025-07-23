@@ -7,7 +7,10 @@ import android.net.Uri
 import android.os.Build
 import android.provider.MediaStore
 import android.util.Log
+import androidx.annotation.OptIn
 import androidx.camera.core.CameraSelector
+import androidx.camera.core.ExperimentalGetImage
+import androidx.camera.core.ImageAnalysis
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.google.mlkit.vision.common.InputImage
@@ -22,12 +25,12 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
-// Data class for recognized text (can be in its own file)
 data class RecognizedText(
     val text: String,
-    val imageUri: Uri? = null // Nullable for live scans
+    val imageUri: Uri? = null // Nullable: null for live scans, non-null for picked images
 )
 
+@OptIn(ExperimentalGetImage::class)
 class TextRecognitionViewModel : ViewModel() {
 
     private val _hasCameraPermission = MutableStateFlow(false)
@@ -44,6 +47,9 @@ class TextRecognitionViewModel : ViewModel() {
 
     private val _toastMessage = MutableSharedFlow<String>()
     val toastMessage = _toastMessage.asSharedFlow()
+
+    // ML Kit Text Recognizer instance
+    private val textRecognizer = TextRecognition.getClient(TextRecognizerOptions.DEFAULT_OPTIONS)
 
     fun updateCameraPermission(isGranted: Boolean) {
         _hasCameraPermission.value = isGranted
@@ -64,41 +70,41 @@ class TextRecognitionViewModel : ViewModel() {
     }
 
     fun onImagePicked(context: Context, uri: Uri?) {
-        uri?.let {
+        uri?.let { pickedUri ->
             viewModelScope.launch {
-                analyzeImageForText(context, it) { newResults ->
+                analyzeImageForText(context, pickedUri) { newPickedText ->
                     _textResults.update { currentResults ->
-                        // Remove any old results from picked images if they existed, or from live scan
-                        val updatedList = currentResults.filter { currentInstance -> currentInstance.imageUri == null }.toMutableList()
-                        newResults.forEach { newText ->
-                            // Only add if it's genuinely new to prevent duplicates when picking same image
-                            if (updatedList.none { prevText -> prevText.text == newText.text && prevText.imageUri == newText.imageUri }) {
-                                updatedList.add(newText)
+                        val updatedList = currentResults.filter { it.imageUri == null }.toMutableList()
+
+                        if (newPickedText != null) {
+                            updatedList.add(newPickedText)
+                        } else {
+                            launch {
+                                _toastMessage.emit("No text found in the selected image.")
                             }
                         }
                         updatedList
                     }
-                    if (newResults.isEmpty()) {
-                        launch {
-                            _toastMessage.emit("No text found in the selected image.")
-                        }
-                    }
                 }
             }
+        } ?: viewModelScope.launch {
+            _toastMessage.emit("No image selected.")
         }
     }
 
     fun onLiveTextDetected(recognizedText: String) {
         if (recognizedText.isNotEmpty()) {
             _textResults.update { currentResults ->
-                // Check if this live recognized text already exists to avoid duplicates
-                if (currentResults.none { it.text == recognizedText && it.imageUri == null }) {
-                    // Filter out previous live scan results and add the new one
-                    val filteredList = currentResults.filter { it.imageUri != null }.toMutableList()
-                    filteredList.add(RecognizedText(recognizedText, null))
-                    filteredList
+                // Check if the recognizedText already exists in the list
+                val isAlreadyPresent = currentResults.any { it.text == recognizedText }
+
+                if (!isAlreadyPresent) {
+                    // If it's not already present, add the new live text result
+                    val updatedList = currentResults.toMutableList()
+                    updatedList.add(RecognizedText(recognizedText, null))
+                    updatedList // Return the updated list
                 } else {
-                    currentResults // No change if already present
+                    currentResults // Return the current list unchanged
                 }
             }
         }
@@ -107,10 +113,10 @@ class TextRecognitionViewModel : ViewModel() {
     fun onFlipCamera() {
         _cameraSelector.update { currentSelector ->
             if (currentSelector == CameraSelector.DEFAULT_BACK_CAMERA) {
-                Log.e("TextRecognitionViewModel", "Switching to front camera")
+                Log.d("TextRecognitionViewModel", "Switching to front camera")
                 CameraSelector.DEFAULT_FRONT_CAMERA
             } else {
-                Log.e("TextRecognitionViewModel", "Switching to back camera")
+                Log.d("TextRecognitionViewModel", "Switching to back camera")
                 CameraSelector.DEFAULT_BACK_CAMERA
             }
         }
@@ -122,10 +128,35 @@ class TextRecognitionViewModel : ViewModel() {
         }
     }
 
+    fun createImageAnalyzer(): ImageAnalysis.Analyzer {
+        return ImageAnalysis.Analyzer { imageProxy ->
+            val mediaImage = imageProxy.image
+            if (mediaImage != null) {
+                val image = InputImage.fromMediaImage(mediaImage, imageProxy.imageInfo.rotationDegrees)
+
+                textRecognizer.process(image)
+                    .addOnSuccessListener { visionText ->
+                        val recognizedText = visionText.text
+                        // Pass the detected text back to the ViewModel's handler
+                        onLiveTextDetected(recognizedText)
+                    }
+                    .addOnFailureListener { e ->
+                        Log.e("TextRecognitionViewModel", "Live text recognition failed: ${e.message}", e)
+                        // Optionally, emit a toast for persistent errors, but usually not for live analysis
+                    }
+                    .addOnCompleteListener {
+                        imageProxy.close() // Important to close the image proxy
+                    }
+            } else {
+                imageProxy.close() // Always close the image proxy
+            }
+        }
+    }
+
     private suspend fun analyzeImageForText(
         context: Context,
         imageUri: Uri,
-        onResult: (List<RecognizedText>) -> Unit
+        onResult: (RecognizedText?) -> Unit
     ) {
         withContext(Dispatchers.IO) {
             try {
@@ -138,44 +169,48 @@ class TextRecognitionViewModel : ViewModel() {
                         MediaStore.Images.Media.getBitmap(context.contentResolver, imageUri)
                     }
                 } catch (e: Exception) {
-                    Log.e("TextRecognizer", "Error decoding image: ${e.message}", e)
+                    Log.e("TextRecognizer", "Error decoding image URI: ${e.message}", e)
                     null
                 }
 
                 if (bitmap != null) {
                     val image = InputImage.fromBitmap(bitmap, 0)
-                    val recognizer = TextRecognition.getClient(TextRecognizerOptions.DEFAULT_OPTIONS)
 
-                    recognizer.process(image)
+                    textRecognizer.process(image)
                         .addOnSuccessListener { visionText ->
                             val recognizedText = visionText.text
-                            val results = if (recognizedText.isNotEmpty()) {
-                                listOf(RecognizedText(recognizedText, imageUri))
+                            if (recognizedText.isNotEmpty()) {
+                                onResult(RecognizedText(recognizedText, imageUri))
                             } else {
-                                emptyList()
+                                onResult(null)
                             }
-                            onResult(results)
                         }
                         .addOnFailureListener { e ->
                             Log.e("TextRecognizer", "Image text recognition failed: ${e.message}", e)
                             viewModelScope.launch {
                                 _toastMessage.emit("Error analyzing image: ${e.message}")
                             }
-                            onResult(emptyList())
+                            onResult(null)
                         }
                 } else {
                     viewModelScope.launch {
                         _toastMessage.emit("Failed to decode image from gallery.")
                     }
-                    onResult(emptyList())
+                    onResult(null)
                 }
             } catch (e: Exception) {
-                Log.e("TextRecognizer", "Unexpected error: ${e.message}", e)
+                Log.e("TextRecognizer", "Unexpected error during image analysis: ${e.message}", e)
                 viewModelScope.launch {
                     _toastMessage.emit("Unexpected error: ${e.message}")
                 }
-                onResult(emptyList())
+                onResult(null)
             }
         }
+    }
+
+    override fun onCleared() {
+        super.onCleared()
+        // Release the ML Kit Text Recognizer when the ViewModel is cleared
+        textRecognizer.close()
     }
 }

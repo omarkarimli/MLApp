@@ -101,7 +101,10 @@ fun ObjectDetectionScreenPreview() {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun ObjectDetectionScreen(navController: NavHostController, viewModel: ObjectDetectionViewModel = viewModel()) {
+fun ObjectDetectionScreen(navController: NavHostController) {
+
+    val viewModel: ObjectDetectionViewModel = viewModel()
+
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
 
@@ -294,6 +297,7 @@ fun ObjectDetectionScreen(navController: NavHostController, viewModel: ObjectDet
     }
 }
 
+@androidx.annotation.OptIn(ExperimentalGetImage::class)
 @Composable
 private fun CameraPreview(
     modifier: Modifier = Modifier,
@@ -306,6 +310,17 @@ private fun CameraPreview(
     val lifecycleOwner = LocalLifecycleOwner.current
     val cameraExecutor = remember { Executors.newSingleThreadExecutor() }
     val cameraProviderFuture = remember { ProcessCameraProvider.getInstance(context) }
+
+    // Initialize the object detector outside of the factory/update blocks
+    // so it's only created once per Composable lifecycle
+    val objectDetector = remember {
+        val options = ObjectDetectorOptions.Builder()
+            .setDetectorMode(ObjectDetectorOptions.STREAM_MODE)
+            .enableMultipleObjects()
+            .enableClassification()
+            .build()
+        ObjectDetection.getClient(options)
+    }
 
     Box(modifier = modifier) {
         AndroidView(
@@ -327,10 +342,25 @@ private fun CameraPreview(
                         .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
                         .build()
                         .also {
-                            it.setAnalyzer(cameraExecutor,
-                                ObjectDetectorAnalyzer { objects, imageWidth, imageHeight ->
-                                    onObjectsDetected(objects, imageWidth, imageHeight)
-                                })
+                            it.setAnalyzer(cameraExecutor) { imageProxy: ImageProxy ->
+                                val mediaImage = imageProxy.image
+                                if (mediaImage != null) {
+                                    val image = InputImage.fromMediaImage(mediaImage, imageProxy.imageInfo.rotationDegrees)
+
+                                    objectDetector.process(image)
+                                        .addOnSuccessListener { detectedObjects ->
+                                            onObjectsDetected(detectedObjects, imageProxy.width, imageProxy.height)
+                                        }
+                                        .addOnFailureListener { e ->
+                                            Log.e("ObjectDetector", "Object detection failed: ${e.message}", e)
+                                        }
+                                        .addOnCompleteListener {
+                                            imageProxy.close()
+                                        }
+                                } else {
+                                    imageProxy.close()
+                                }
+                            }
                         }
 
                     try {
@@ -364,10 +394,25 @@ private fun CameraPreview(
                     .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
                     .build()
                     .also {
-                        it.setAnalyzer(cameraExecutor,
-                            ObjectDetectorAnalyzer { detectedObjectsResult, imageWidth, imageHeight ->
-                                onObjectsDetected(detectedObjectsResult, imageWidth, imageHeight)
-                            })
+                        it.setAnalyzer(cameraExecutor) { imageProxy: ImageProxy ->
+                            val mediaImage = imageProxy.image
+                            if (mediaImage != null) {
+                                val image = InputImage.fromMediaImage(mediaImage, imageProxy.imageInfo.rotationDegrees)
+
+                                objectDetector.process(image)
+                                    .addOnSuccessListener { detectedObjectsResult ->
+                                        onObjectsDetected(detectedObjectsResult, imageProxy.width, imageProxy.height)
+                                    }
+                                    .addOnFailureListener { e ->
+                                        Log.e("ObjectDetector", "Object detection failed: ${e.message}", e)
+                                    }
+                                    .addOnCompleteListener {
+                                        imageProxy.close()
+                                    }
+                            } else {
+                                imageProxy.close()
+                            }
+                        }
                     }
 
                 try {
@@ -394,6 +439,8 @@ private fun CameraPreview(
     DisposableEffect(Unit) {
         onDispose {
             cameraExecutor.shutdown()
+            // Important: Close the ObjectDetector to release resources
+            objectDetector.close()
         }
     }
 }
@@ -452,37 +499,6 @@ private fun BottomSheetContentObjects(objectResults: List<ScannedObject>, contex
                     if (index < objectResults.lastIndex) HorizontalDivider()
                 }
             }
-        }
-    }
-}
-
-class ObjectDetectorAnalyzer(private val listener: (List<DetectedObject>, Int, Int) -> Unit) : ImageAnalysis.Analyzer {
-    private val options = ObjectDetectorOptions.Builder()
-        .setDetectorMode(ObjectDetectorOptions.STREAM_MODE)
-        .enableMultipleObjects()
-        .enableClassification()
-        .build()
-
-    private val objectDetector = ObjectDetection.getClient(options)
-
-    @androidx.annotation.OptIn(ExperimentalGetImage::class)
-    override fun analyze(imageProxy: ImageProxy) {
-        val mediaImage = imageProxy.image
-        if (mediaImage != null) {
-            val image = InputImage.fromMediaImage(mediaImage, imageProxy.imageInfo.rotationDegrees)
-
-            objectDetector.process(image)
-                .addOnSuccessListener { detectedObjects ->
-                    listener(detectedObjects, imageProxy.width, imageProxy.height)
-                }
-                .addOnFailureListener { e ->
-                    Log.e("ObjectDetector", "Object detection failed: ${e.message}", e)
-                }
-                .addOnCompleteListener {
-                    imageProxy.close()
-                }
-        } else {
-            imageProxy.close()
         }
     }
 }

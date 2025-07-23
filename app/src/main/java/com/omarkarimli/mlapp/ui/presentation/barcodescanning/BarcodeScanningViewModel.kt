@@ -12,7 +12,6 @@ import android.widget.Toast
 import androidx.annotation.OptIn
 import androidx.camera.core.CameraSelector
 import androidx.camera.core.ExperimentalGetImage
-import androidx.camera.core.ImageAnalysis
 import androidx.camera.core.ImageProxy
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.ViewModel
@@ -49,6 +48,10 @@ class BarcodeScanningViewModel : ViewModel() {
     private val _shouldExpandBottomSheet = MutableStateFlow(false)
     val shouldExpandBottomSheet: StateFlow<Boolean> = _shouldExpandBottomSheet.asStateFlow()
 
+    // Barcode scanner instance for live camera analysis
+    private val barcodeScannerOptions = BarcodeScannerOptions.Builder().setBarcodeFormats(Barcode.FORMAT_ALL_FORMATS).build()
+    private val liveBarcodeScanner = BarcodeScanning.getClient(barcodeScannerOptions)
+
     fun setCameraPermission(isGranted: Boolean) {
         _hasCameraPermission.value = isGranted
     }
@@ -77,6 +80,22 @@ class BarcodeScanningViewModel : ViewModel() {
         }
     }
 
+    @OptIn(ExperimentalGetImage::class)
+    fun analyzeLiveBarcode(imageProxy: ImageProxy) {
+        val mediaImage = imageProxy.image
+        if (mediaImage != null) {
+            val image = InputImage.fromMediaImage(mediaImage, imageProxy.imageInfo.rotationDegrees)
+            liveBarcodeScanner.process(image)
+                .addOnSuccessListener { barcodes ->
+                    if (barcodes.isNotEmpty()) onBarcodeDetected(barcodes)
+                }
+                .addOnFailureListener { e -> Log.e("BarcodeScannerVM", "Live barcode scanning failed: ${e.message}", e) }
+                .addOnCompleteListener { imageProxy.close() }
+        } else {
+            imageProxy.close()
+        }
+    }
+
     fun analyzeImageForBarcodes(context: Context, imageUri: Uri) {
         viewModelScope.launch(Dispatchers.IO) {
             try {
@@ -93,7 +112,7 @@ class BarcodeScanningViewModel : ViewModel() {
                 bitmap?.let {
                     val image = InputImage.fromBitmap(it, 0)
                     val options = BarcodeScannerOptions.Builder().setBarcodeFormats(Barcode.FORMAT_ALL_FORMATS).build()
-                    val scanner = BarcodeScanning.getClient(options)
+                    val scanner = BarcodeScanning.getClient(options) // Use a new scanner for static images
                     scanner.process(image)
                         .addOnSuccessListener { barcodes ->
                             val scannedBarcodes = barcodes.map { currentBarcode ->
@@ -136,10 +155,10 @@ class BarcodeScanningViewModel : ViewModel() {
 
     fun onFlipCamera() {
         _cameraSelector.value = if (_cameraSelector.value == CameraSelector.DEFAULT_BACK_CAMERA) {
-            Log.e("BarcodeScreen", "Switching to front camera")
+            Log.d("BarcodeScreen", "Switching to front camera")
             CameraSelector.DEFAULT_FRONT_CAMERA
         } else {
-            Log.e("BarcodeScreen", "Switching to back camera")
+            Log.d("BarcodeScreen", "Switching to back camera")
             CameraSelector.DEFAULT_BACK_CAMERA
         }
     }
@@ -147,23 +166,5 @@ class BarcodeScanningViewModel : ViewModel() {
     // Reset the shouldExpandBottomSheet flag after it's been consumed by the UI
     fun resetBottomSheetExpansion() {
         _shouldExpandBottomSheet.value = false
-    }
-}
-
-// Keep the BarcodeAnalyzer as a separate class as it's a direct dependency of CameraX
-class BarcodeAnalyzer(private val listener: (List<Barcode>) -> Unit) : ImageAnalysis.Analyzer {
-    private val options = BarcodeScannerOptions.Builder().setBarcodeFormats(Barcode.FORMAT_ALL_FORMATS).build()
-    private val scanner = BarcodeScanning.getClient(options)
-
-    @OptIn(ExperimentalGetImage::class)
-    override fun analyze(imageProxy: ImageProxy) {
-        val mediaImage = imageProxy.image
-        if (mediaImage != null) {
-            val image = InputImage.fromMediaImage(mediaImage, imageProxy.imageInfo.rotationDegrees)
-            scanner.process(image)
-                .addOnSuccessListener { barcodes -> if (barcodes.isNotEmpty()) listener(barcodes) }
-                .addOnFailureListener { e -> Log.e("BarcodeScanner", "Barcode scanning failed: ${e.message}", e) }
-                .addOnCompleteListener { imageProxy.close() }
-        } else imageProxy.close()
     }
 }

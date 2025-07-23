@@ -11,8 +11,10 @@ import android.provider.MediaStore
 import android.util.Log
 import androidx.activity.result.ActivityResultLauncher
 import androidx.camera.core.CameraSelector
+import androidx.camera.core.ExperimentalGetImage
+import androidx.camera.core.ImageProxy
 import androidx.core.content.ContextCompat
-import androidx.lifecycle.ViewModel // CHANGE: Extend ViewModel
+import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.google.mlkit.vision.common.InputImage
 import com.google.mlkit.vision.label.ImageLabel
@@ -25,20 +27,17 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
-// Data class to hold an ImageLabel and its associated image URI (if from a picked image)
 data class ImageLabelResult(
     val label: ImageLabel,
     val imageUri: Uri? = null // Nullable for live scans
 )
 
-// ViewModel for Image Labeling Screen
-// CHANGE: Extend ViewModel, no constructor context
 class ImageLabelingViewModel : ViewModel() {
 
-    private val _hasCameraPermission = MutableStateFlow(false) // Initialized to false
+    private val _hasCameraPermission = MutableStateFlow(false)
     val hasCameraPermission = _hasCameraPermission.asStateFlow()
 
-    private val _hasStoragePermission = MutableStateFlow(false) // Initialized to false
+    private val _hasStoragePermission = MutableStateFlow(false)
     val hasStoragePermission = _hasStoragePermission.asStateFlow()
 
     private val _imageLabelResults = MutableStateFlow<List<ImageLabelResult>>(emptyList())
@@ -49,6 +48,9 @@ class ImageLabelingViewModel : ViewModel() {
 
     private val _toastMessage = MutableSharedFlow<String>()
     val toastMessage = _toastMessage.asSharedFlow()
+
+    // Initialize the ImageLabeler here
+    private val imageLabeler = ImageLabeling.getClient(ImageLabelerOptions.DEFAULT_OPTIONS)
 
     fun onCameraPermissionResult(isGranted: Boolean) {
         _hasCameraPermission.value = isGranted
@@ -68,7 +70,6 @@ class ImageLabelingViewModel : ViewModel() {
         }
     }
 
-    // CHANGE: Accepts Context parameter, mirrors BarcodeScanningViewModel's initializePermissions
     fun initializePermissions(context: Context) {
         _hasCameraPermission.value = ContextCompat.checkSelfPermission(
             context,
@@ -100,7 +101,6 @@ class ImageLabelingViewModel : ViewModel() {
         }
     }
 
-    // CHANGE: Accepts Context parameter
     fun analyzeImageFromUri(context: Context, uri: Uri?) {
         uri?.let {
             viewModelScope.launch {
@@ -120,9 +120,8 @@ class ImageLabelingViewModel : ViewModel() {
 
                 if (bitmap != null) {
                     val image = InputImage.fromBitmap(bitmap, 0)
-                    val labeler = ImageLabeling.getClient(ImageLabelerOptions.DEFAULT_OPTIONS)
 
-                    labeler.process(image)
+                    imageLabeler.process(image)
                         .addOnSuccessListener { labels ->
                             val newLabelResults = labels.map { prevInstance -> ImageLabelResult(prevInstance, uri) }
                             if (newLabelResults.isNotEmpty()) {
@@ -154,6 +153,32 @@ class ImageLabelingViewModel : ViewModel() {
         }
     }
 
+    // New function to analyze ImageProxy directly in the ViewModel
+    @androidx.annotation.OptIn(ExperimentalGetImage::class)
+    fun analyzeImageProxy(imageProxy: ImageProxy) {
+        val mediaImage = imageProxy.image
+        if (mediaImage != null) {
+            val image = InputImage.fromMediaImage(mediaImage, imageProxy.imageInfo.rotationDegrees)
+
+            imageLabeler.process(image)
+                .addOnSuccessListener { labels ->
+                    // Call the existing onLiveLabelsDetected with the results
+                    if (labels.isNotEmpty()) {
+                        onLiveLabelsDetected(labels)
+                    }
+                }
+                .addOnFailureListener { e ->
+                    Log.e("ImageLabeler", "Image labeling failed: ${e.message}", e)
+                    // Optionally emit a toast or log for live analysis errors
+                }
+                .addOnCompleteListener {
+                    imageProxy.close() // Important: Close the imageProxy
+                }
+        } else {
+            imageProxy.close() // Important: Close the imageProxy even if mediaImage is null
+        }
+    }
+
     fun onLiveLabelsDetected(labels: List<ImageLabel>) {
         _imageLabelResults.update { currentList ->
             val currentLiveLabels = currentList.filter { it.imageUri == null }.toSet()
@@ -164,7 +189,7 @@ class ImageLabelingViewModel : ViewModel() {
                 filteredList.addAll(newLiveLabels)
                 filteredList.toList()
             } else {
-                currentList // No change, return current list to avoid unnecessary recomposition
+                currentList
             }
         }
     }
@@ -184,6 +209,4 @@ class ImageLabelingViewModel : ViewModel() {
             _toastMessage.emit("Save functionality not implemented yet.")
         }
     }
-
-    // REMOVED: No custom ViewModel.Factory as per BarcodeScanningViewModel
 }

@@ -9,9 +9,7 @@ import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.camera.core.CameraSelector
-import androidx.camera.core.ExperimentalGetImage
 import androidx.camera.core.ImageAnalysis
-import androidx.camera.core.ImageProxy
 import androidx.camera.core.Preview
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.camera.view.PreviewView
@@ -70,9 +68,6 @@ import androidx.core.content.ContextCompat
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
-import com.google.mlkit.vision.common.InputImage
-import com.google.mlkit.vision.text.TextRecognition
-import com.google.mlkit.vision.text.latin.TextRecognizerOptions
 import com.omarkarimli.mlapp.ui.navigation.Screen
 import com.omarkarimli.mlapp.ui.presentation.components.CameraPermissionPlaceholder
 import com.omarkarimli.mlapp.ui.presentation.components.DetectedActionImage
@@ -82,10 +77,16 @@ import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun TextRecognitionScreen(navController: NavHostController, viewModel: TextRecognitionViewModel = viewModel()) {
+fun TextRecognitionScreen(navController: NavHostController) {
+
+    val viewModel: TextRecognitionViewModel = viewModel()
+
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
 
+    // Get the ImageAnalysis.Analyzer from the ViewModel
+    // This analyzer will directly call viewModel.onLiveTextDetected
+    val imageAnalyzer = remember { viewModel.createImageAnalyzer() }
     val hasCameraPermission by viewModel.hasCameraPermission.collectAsState()
     val hasStoragePermission by viewModel.hasStoragePermission.collectAsState()
     val textResults by viewModel.textResults.collectAsState()
@@ -239,16 +240,7 @@ fun TextRecognitionScreen(navController: NavHostController, viewModel: TextRecog
                                 .weight(1f)
                                 .background(Color.Black, RoundedCornerShape(Dimens.CornerRadiusMedium)),
                             cameraSelector = cameraSelector,
-                            onTextDetected = { recognizedText ->
-                                viewModel.onLiveTextDetected(recognizedText)
-                                if (recognizedText.isNotEmpty()) {
-                                    coroutineScope.launch {
-                                        if (sheetScaffoldState.bottomSheetState.currentValue == SheetValue.Hidden) {
-                                            sheetScaffoldState.bottomSheetState.partialExpand()
-                                        }
-                                    }
-                                }
-                            }
+                            analyzer = imageAnalyzer // Pass the analyzer directly
                         )
                     } else {
                         CameraPermissionPlaceholder(
@@ -267,7 +259,7 @@ fun TextRecognitionScreen(navController: NavHostController, viewModel: TextRecog
 @Composable
 private fun CameraPreview(
     modifier: Modifier = Modifier,
-    onTextDetected: (String) -> Unit,
+    analyzer: ImageAnalysis.Analyzer, // Now accepts the analyzer directly
     cameraSelector: CameraSelector
 ) {
     val context = LocalContext.current
@@ -291,25 +283,25 @@ private fun CameraPreview(
                         it.surfaceProvider = previewView.surfaceProvider
                     }
 
-                val imageAnalyzer = ImageAnalysis.Builder()
+                // Use the analyzer passed from the ViewModel
+                val imageAnalysis = ImageAnalysis.Builder()
                     .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
                     .build()
                     .also {
-                        it.setAnalyzer(cameraExecutor, TextAnalyzer { recognizedText ->
-                            onTextDetected(recognizedText)
-                        })
+                        it.setAnalyzer(cameraExecutor, analyzer)
                     }
 
                 try {
-                    cameraProvider.unbindAll()
+                    cameraProvider.unbindAll() // Unbind any previous use cases
                     cameraProvider.bindToLifecycle(
                         lifecycleOwner,
-                        cameraSelector, // Use the initial cameraSelector
+                        cameraSelector,
                         preview,
-                        imageAnalyzer
+                        imageAnalysis
                     )
                 } catch (exc: Exception) {
                     Log.e("TextRecognizer", "Use case binding failed", exc)
+                    Toast.makeText(context, "Error binding camera: ${exc.message}", Toast.LENGTH_SHORT).show()
                 }
             }, ContextCompat.getMainExecutor(ctx)) // Use main executor for the listener
             previewView
@@ -317,7 +309,7 @@ private fun CameraPreview(
         update = { previewView -> // This block runs on recomposition when cameraSelector changes
             val cameraProvider = cameraProviderFuture.get()
 
-            // Unbind all use cases before rebinding
+            // Unbind all use cases before rebinding to apply new cameraSelector
             cameraProvider.unbindAll()
 
             val preview = Preview.Builder()
@@ -326,13 +318,12 @@ private fun CameraPreview(
                     it.surfaceProvider = previewView.surfaceProvider
                 }
 
-            val imageAnalyzer = ImageAnalysis.Builder()
+            // Use the analyzer passed from the ViewModel
+            val imageAnalysis = ImageAnalysis.Builder()
                 .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
                 .build()
                 .also {
-                    it.setAnalyzer(cameraExecutor, TextAnalyzer { detectedTexts ->
-                        onTextDetected(detectedTexts)
-                    })
+                    it.setAnalyzer(cameraExecutor, analyzer)
                 }
 
             try {
@@ -340,15 +331,16 @@ private fun CameraPreview(
                     lifecycleOwner,
                     cameraSelector, // Use the updated cameraSelector
                     preview,
-                    imageAnalyzer
+                    imageAnalysis
                 )
             } catch (exc: Exception) {
-                Log.e("BarcodeScanner", "Use case binding failed", exc)
+                Log.e("BarcodeScanner", "Error switching camera use case binding", exc)
                 Toast.makeText(context, "Error switching camera: ${exc.message}", Toast.LENGTH_SHORT).show()
             }
         }
     )
 
+    // Ensure cameraExecutor is shut down when the Composable leaves the composition
     DisposableEffect(Unit) {
         onDispose {
             cameraExecutor.shutdown()
@@ -409,34 +401,6 @@ private fun TextRecognitionBottomSheetContent(textResults: List<RecognizedText>,
                     if (index < textResults.lastIndex) HorizontalDivider()
                 }
             }
-        }
-    }
-}
-
-class TextAnalyzer(private val listener: (String) -> Unit) : ImageAnalysis.Analyzer {
-    private val recognizer = TextRecognition.getClient(TextRecognizerOptions.DEFAULT_OPTIONS)
-
-    @androidx.annotation.OptIn(ExperimentalGetImage::class)
-    override fun analyze(imageProxy: ImageProxy) {
-        val mediaImage = imageProxy.image
-        if (mediaImage != null) {
-            val image = InputImage.fromMediaImage(mediaImage, imageProxy.imageInfo.rotationDegrees)
-
-            recognizer.process(image)
-                .addOnSuccessListener { visionText ->
-                    val recognizedText = visionText.text
-                    if (recognizedText.isNotEmpty()) {
-                        listener(recognizedText)
-                    }
-                }
-                .addOnFailureListener { e ->
-                    Log.e("TextRecognizer", "Text recognition failed: ${e.message}", e)
-                }
-                .addOnCompleteListener {
-                    imageProxy.close()
-                }
-        } else {
-            imageProxy.close()
         }
     }
 }

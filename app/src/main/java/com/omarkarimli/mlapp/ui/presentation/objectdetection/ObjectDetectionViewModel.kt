@@ -53,6 +53,16 @@ class ObjectDetectionViewModel : ViewModel() {
     private val _toastMessage = MutableSharedFlow<String>()
     val toastMessage = _toastMessage.asSharedFlow()
 
+    // Object detector for single image mode (gallery)
+    private val singleImageObjectDetector by lazy {
+        val options = ObjectDetectorOptions.Builder()
+            .setDetectorMode(ObjectDetectorOptions.SINGLE_IMAGE_MODE)
+            .enableMultipleObjects()
+            .enableClassification()
+            .build()
+        ObjectDetection.getClient(options)
+    }
+
     fun updateCameraPermission(isGranted: Boolean) {
         _hasCameraPermission.value = isGranted
         if (!isGranted) {
@@ -153,15 +163,7 @@ class ObjectDetectionViewModel : ViewModel() {
                 if (bitmap != null) {
                     val image = InputImage.fromBitmap(bitmap, 0)
 
-                    val options = ObjectDetectorOptions.Builder()
-                        .setDetectorMode(ObjectDetectorOptions.SINGLE_IMAGE_MODE)
-                        .enableMultipleObjects()
-                        .enableClassification()
-                        .build()
-
-                    val objectDetector = ObjectDetection.getClient(options)
-
-                    objectDetector.process(image)
+                    singleImageObjectDetector.process(image) // Use the dedicated single-image detector
                         .addOnSuccessListener { detectedObjects ->
                             val scannedObjects = detectedObjects.map { ScannedObject(it, imageUri) }
                             onResult(scannedObjects)
@@ -189,5 +191,11 @@ class ObjectDetectionViewModel : ViewModel() {
                 }
             }
         }
+    }
+
+    override fun onCleared() {
+        super.onCleared()
+        // Close the object detector when the ViewModel is no longer used
+        singleImageObjectDetector.close()
     }
 }
