@@ -242,9 +242,8 @@ private fun BarcodeResultCard(scannedBarcode: ScannedBarcode, context: Context) 
     val imageUri = scannedBarcode.imageUri
     Row(modifier = Modifier.fillMaxWidth().padding(horizontal = Dimens.PaddingExtraSmall, vertical = Dimens.PaddingMedium), verticalAlignment = Alignment.CenterVertically) {
         Column(modifier = Modifier.weight(1f)) {
-            Text("Format: ${getBarcodeFormatName(barcode.format)}", style = MaterialTheme.typography.bodyLarge)
-            Text("Value: ${barcode.rawValue ?: "N/A"}", style = MaterialTheme.typography.bodyMedium)
-            Text("Type: ${getBarcodeValueTypeName(barcode.valueType)}", style = MaterialTheme.typography.bodySmall, color = Color.Gray)
+            Text("Format: ${getBarcodeFormatName(barcode.format)} (${getBarcodeValueTypeName(barcode.valueType)})", style = MaterialTheme.typography.bodyMedium, color = Color.Gray)
+            Text("Value: ${barcode.rawValue ?: "N/A"}", style = MaterialTheme.typography.bodyLarge)
         }
         DetectedActionImage(context, imageUri)
     }
