@@ -503,12 +503,10 @@ private fun ObjectResultCard(scannedObject: ScannedObject, context: Context) {
         ) {
             Text(text = "Bounding Box: ${detectedObject.boundingBox}", style = MaterialTheme.typography.bodySmall, color = Color.Gray)
             detectedObject.labels.forEach { label ->
-                Text(text = "Label: ${label.text}", style = MaterialTheme.typography.bodyLarge)
-                Text(text = "Confidence: ${"%.2f".format(label.confidence)}", style = MaterialTheme.typography.bodyMedium)
+                Text(text = "Label: ${label.text} (${"%.2f".format(label.confidence)})", style = MaterialTheme.typography.bodyLarge)
             }
             if (detectedObject.labels.isEmpty()) {
                 Text(text = "Label: N/A", style = MaterialTheme.typography.bodyLarge)
-                Text(text = "Confidence: N/A", style = MaterialTheme.typography.bodyMedium)
             }
         }
 

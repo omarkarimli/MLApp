@@ -61,5 +61,5 @@ object Dimens {
     const val FixedFaceMeshScaleFactor = 1.25f
 
     const val FixedFaceMeshPaddingX = 176f
-    const val FixedFaceMeshPaddingY = 492f
+    const val FixedFaceMeshPaddingY = 476f
 }
