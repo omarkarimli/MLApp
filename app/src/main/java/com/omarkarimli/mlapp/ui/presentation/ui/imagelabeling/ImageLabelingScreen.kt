@@ -1,4 +1,4 @@
-package com.omarkarimli.mlapp.ui.presentation.textrecognition
+package com.omarkarimli.mlapp.ui.presentation.ui.imagelabeling
 
 import android.Manifest
 import android.content.Context
@@ -10,6 +10,7 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.camera.core.CameraSelector
 import androidx.camera.core.ImageAnalysis
+import androidx.camera.core.ImageProxy
 import androidx.camera.core.Preview
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.camera.view.PreviewView
@@ -56,7 +57,6 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -68,29 +68,49 @@ import androidx.core.content.ContextCompat
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
+import com.omarkarimli.mlapp.domain.models.ImageLabelResult
 import com.omarkarimli.mlapp.ui.navigation.Screen
-import com.omarkarimli.mlapp.ui.presentation.components.CameraPermissionPlaceholder
-import com.omarkarimli.mlapp.ui.presentation.components.DetectedActionImage
+import com.omarkarimli.mlapp.ui.presentation.ui.components.DetectedActionImage
+import com.omarkarimli.mlapp.ui.presentation.ui.components.CameraPermissionPlaceholder
+import com.omarkarimli.mlapp.ui.theme.MLAppTheme
 import com.omarkarimli.mlapp.utils.Dimens
 import java.util.concurrent.Executors
-import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun TextRecognitionScreen(navController: NavHostController) {
-
-    val viewModel: TextRecognitionViewModel = viewModel()
-
+fun ImageLabelingScreen(navController: NavHostController) {
     val context = LocalContext.current
-    val coroutineScope = rememberCoroutineScope()
 
-    // Get the ImageAnalysis.Analyzer from the ViewModel
-    // This analyzer will directly call viewModel.onLiveTextDetected
-    val imageAnalyzer = remember { viewModel.createImageAnalyzer() }
+    val viewModel: ImageLabelingViewModel = viewModel() // Get the ViewModel instance
+
     val hasCameraPermission by viewModel.hasCameraPermission.collectAsState()
     val hasStoragePermission by viewModel.hasStoragePermission.collectAsState()
-    val textResults by viewModel.textResults.collectAsState()
+    val imageLabelResults by viewModel.imageLabelResults.collectAsState()
     val cameraSelector by viewModel.cameraSelector.collectAsState()
+
+    val cameraPermissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission(),
+        onResult = viewModel::onCameraPermissionResult
+    )
+
+    val storagePermissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission(),
+        onResult = viewModel::onStoragePermissionResult
+    )
+
+    val pickImageLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetContent(),
+        onResult = { uri: Uri? -> viewModel.analyzeImageFromUri(context, uri) }
+    )
+
+    LaunchedEffect(Unit) {
+        viewModel.initializePermissions(context)
+        viewModel.requestPermissions(cameraPermissionLauncher, storagePermissionLauncher)
+
+        viewModel.toastMessage.collect { message ->
+            Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
+        }
+    }
 
     val sheetScaffoldState = rememberBottomSheetScaffoldState(
         bottomSheetState = rememberStandardBottomSheetState(
@@ -99,54 +119,11 @@ fun TextRecognitionScreen(navController: NavHostController) {
         )
     )
 
-    // Collect Toast messages from ViewModel
-    LaunchedEffect(Unit) {
-        viewModel.toastMessage.collect { message ->
-            Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
-        }
-    }
-
-    val cameraPermissionLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.RequestPermission(),
-        onResult = { isGranted ->
-            viewModel.updateCameraPermission(isGranted)
-        }
-    )
-
-    val storagePermissionLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.RequestPermission(),
-        onResult = { isGranted ->
-            viewModel.updateStoragePermission(isGranted)
-        }
-    )
-
-    val pickImageLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.GetContent(),
-        onResult = { uri: Uri? ->
-            viewModel.onImagePicked(context, uri)
-            uri?.let {
-                // If an image was picked and results exist, expand the sheet
-                if (textResults.any { it.imageUri == uri }) {
-                    coroutineScope.launch {
-                        if (sheetScaffoldState.bottomSheetState.currentValue != SheetValue.Expanded) {
-                            sheetScaffoldState.bottomSheetState.expand()
-                        }
-                    }
-                }
-            }
-        }
-    )
-
-    LaunchedEffect(Unit) {
-        // Initial permission requests
-        if (!hasCameraPermission) {
-            cameraPermissionLauncher.launch(Manifest.permission.CAMERA)
-        }
-        if (!hasStoragePermission) {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                storagePermissionLauncher.launch(Manifest.permission.READ_MEDIA_IMAGES)
-            } else {
-                storagePermissionLauncher.launch(Manifest.permission.READ_EXTERNAL_STORAGE)
+    // Effect to expand sheet if labels are detected
+    LaunchedEffect(imageLabelResults) {
+        if (imageLabelResults.isNotEmpty()) {
+            if (sheetScaffoldState.bottomSheetState.currentValue == SheetValue.Hidden) {
+                sheetScaffoldState.bottomSheetState.partialExpand()
             }
         }
     }
@@ -156,7 +133,7 @@ fun TextRecognitionScreen(navController: NavHostController) {
             TopAppBar(
                 title = {
                     Text(
-                        Screen.TextRecognition.title,
+                        Screen.ImageLabeling.title,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
                     )
@@ -170,14 +147,15 @@ fun TextRecognitionScreen(navController: NavHostController) {
                     FilledIconButton(
                         onClick = {
                             if (hasStoragePermission) {
-                                coroutineScope.launch { sheetScaffoldState.bottomSheetState.partialExpand() }
                                 pickImageLauncher.launch("image/*")
                             } else {
+                                // Request permission if not granted
                                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
                                     storagePermissionLauncher.launch(Manifest.permission.READ_MEDIA_IMAGES)
                                 } else {
                                     storagePermissionLauncher.launch(Manifest.permission.READ_EXTERNAL_STORAGE)
                                 }
+                                Toast.makeText(context, "Storage permission is required to pick photos.", Toast.LENGTH_SHORT).show()
                             }
                         },
                         modifier = Modifier.size(Dimens.IconSizeLarge),
@@ -195,8 +173,9 @@ fun TextRecognitionScreen(navController: NavHostController) {
                     }
                     Spacer(Modifier.size(Dimens.SpacerSmall))
                     FilledTonalIconButton(
-                        onClick = { viewModel.onSaveClicked() },
-                        modifier = Modifier.width(Dimens.IconSizeExtraLarge)
+                        onClick = viewModel::onSaveClicked,
+                        modifier = Modifier
+                            .width(Dimens.IconSizeExtraLarge)
                             .height(Dimens.IconSizeLarge),
                         shape = IconButtonDefaults.filledShape
                     ) {
@@ -221,10 +200,10 @@ fun TextRecognitionScreen(navController: NavHostController) {
                 BottomSheetDefaults.DragHandle()
             },
             sheetContent = {
-                TextRecognitionBottomSheetContent(
-                    textResults = textResults,
+                BottomSheetContentImageLabel(
+                    imageLabelResults = imageLabelResults,
                     context = context,
-                    onFlipCamera = { viewModel.onFlipCamera() }
+                    onFlipCamera = viewModel::onFlipCameraClicked
                 )
             },
             content = {
@@ -240,7 +219,8 @@ fun TextRecognitionScreen(navController: NavHostController) {
                                 .weight(1f)
                                 .background(Color.Black, RoundedCornerShape(Dimens.CornerRadiusMedium)),
                             cameraSelector = cameraSelector,
-                            analyzer = imageAnalyzer // Pass the analyzer directly
+                            // Pass the ViewModel's analyzeImageProxy function directly
+                            onImageProxyAnalyzed = viewModel::analyzeImageProxy
                         )
                     } else {
                         CameraPermissionPlaceholder(
@@ -259,7 +239,8 @@ fun TextRecognitionScreen(navController: NavHostController) {
 @Composable
 private fun CameraPreview(
     modifier: Modifier = Modifier,
-    analyzer: ImageAnalysis.Analyzer, // Now accepts the analyzer directly
+    // Change the parameter type to accept a function that takes ImageProxy
+    onImageProxyAnalyzed: (ImageProxy) -> Unit,
     cameraSelector: CameraSelector
 ) {
     val context = LocalContext.current
@@ -273,7 +254,7 @@ private fun CameraPreview(
             val previewView = PreviewView(ctx).apply {
                 this.scaleType = PreviewView.ScaleType.FIT_START
             }
-            // Add listener to cameraProviderFuture to bind camera once available
+
             cameraProviderFuture.addListener({
                 val cameraProvider = cameraProviderFuture.get()
 
@@ -283,33 +264,34 @@ private fun CameraPreview(
                         it.surfaceProvider = previewView.surfaceProvider
                     }
 
-                // Use the analyzer passed from the ViewModel
-                val imageAnalysis = ImageAnalysis.Builder()
+                val imageAnalyzer = ImageAnalysis.Builder()
                     .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
                     .build()
                     .also {
-                        it.setAnalyzer(cameraExecutor, analyzer)
+                        // Pass the ViewModel's analyzeImageProxy directly to the analyzer's setAnalyzer
+                        it.setAnalyzer(cameraExecutor) { imageProxy ->
+                            onImageProxyAnalyzed(imageProxy)
+                        }
                     }
 
                 try {
-                    cameraProvider.unbindAll() // Unbind any previous use cases
+                    cameraProvider.unbindAll()
                     cameraProvider.bindToLifecycle(
                         lifecycleOwner,
                         cameraSelector,
                         preview,
-                        imageAnalysis
+                        imageAnalyzer
                     )
                 } catch (exc: Exception) {
-                    Log.e("TextRecognizer", "Use case binding failed", exc)
-                    Toast.makeText(context, "Error binding camera: ${exc.message}", Toast.LENGTH_SHORT).show()
+                    Log.e("ImageLabeler", "Use case binding failed", exc)
                 }
-            }, ContextCompat.getMainExecutor(ctx)) // Use main executor for the listener
+            }, ContextCompat.getMainExecutor(ctx))
+
             previewView
         },
-        update = { previewView -> // This block runs on recomposition when cameraSelector changes
+        update = { previewView ->
             val cameraProvider = cameraProviderFuture.get()
 
-            // Unbind all use cases before rebinding to apply new cameraSelector
             cameraProvider.unbindAll()
 
             val preview = Preview.Builder()
@@ -318,29 +300,30 @@ private fun CameraPreview(
                     it.surfaceProvider = previewView.surfaceProvider
                 }
 
-            // Use the analyzer passed from the ViewModel
-            val imageAnalysis = ImageAnalysis.Builder()
+            val imageAnalyzer = ImageAnalysis.Builder()
                 .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
                 .build()
                 .also {
-                    it.setAnalyzer(cameraExecutor, analyzer)
+                    // Pass the ViewModel's analyzeImageProxy directly to the analyzer's setAnalyzer
+                    it.setAnalyzer(cameraExecutor) { imageProxy ->
+                        onImageProxyAnalyzed(imageProxy)
+                    }
                 }
 
             try {
                 cameraProvider.bindToLifecycle(
                     lifecycleOwner,
-                    cameraSelector, // Use the updated cameraSelector
+                    cameraSelector,
                     preview,
-                    imageAnalysis
+                    imageAnalyzer
                 )
             } catch (exc: Exception) {
-                Log.e("BarcodeScanner", "Error switching camera use case binding", exc)
+                Log.e("BarcodeScanner", "Use case binding failed", exc)
                 Toast.makeText(context, "Error switching camera: ${exc.message}", Toast.LENGTH_SHORT).show()
             }
         }
     )
 
-    // Ensure cameraExecutor is shut down when the Composable leaves the composition
     DisposableEffect(Unit) {
         onDispose {
             cameraExecutor.shutdown()
@@ -350,11 +333,12 @@ private fun CameraPreview(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun TextRecognitionBottomSheetContent(textResults: List<RecognizedText>, context: Context, onFlipCamera: () -> Unit) {
+private fun BottomSheetContentImageLabel(imageLabelResults: List<ImageLabelResult>, context: Context, onFlipCamera: () -> Unit) {
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = Dimens.PaddingMedium),
+            .padding(horizontal = Dimens.PaddingMedium)
+            .background(MaterialTheme.colorScheme.background),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Row(
@@ -363,7 +347,7 @@ private fun TextRecognitionBottomSheetContent(textResults: List<RecognizedText>,
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
             Text(
-                text = "Recognized Text",
+                text = "Detected Labels",
                 modifier = Modifier.padding(bottom = Dimens.PaddingSmall),
                 textAlign = TextAlign.Start,
                 style = MaterialTheme.typography.titleLarge,
@@ -378,9 +362,9 @@ private fun TextRecognitionBottomSheetContent(textResults: List<RecognizedText>,
             }
         }
 
-        if (textResults.isEmpty()) {
+        if (imageLabelResults.isEmpty()) {
             Text(
-                "No text recognized yet. Scan live or pick an image.",
+                "No labels detected yet. Scan live or pick an image.",
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(Dimens.PaddingSmall),
@@ -388,7 +372,7 @@ private fun TextRecognitionBottomSheetContent(textResults: List<RecognizedText>,
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
-            Spacer(modifier = Modifier.height(Dimens.PaddingMedium)) // Added spacer for better layout if empty
+            Spacer(modifier = Modifier.height(Dimens.PaddingMedium))
         } else {
             LazyColumn(
                 modifier = Modifier
@@ -396,9 +380,9 @@ private fun TextRecognitionBottomSheetContent(textResults: List<RecognizedText>,
                     .heightIn(max = Dimens.BarcodeListMaxHeight),
                 contentPadding = PaddingValues(vertical = Dimens.PaddingExtraSmall)
             ) {
-                itemsIndexed(textResults) { index, recognizedText ->
-                    TextResultCard(recognizedText = recognizedText, context = context)
-                    if (index < textResults.lastIndex) HorizontalDivider()
+                itemsIndexed(imageLabelResults) { index, imageLabelResult ->
+                    ImageLabelResultCard(imageLabelResult = imageLabelResult, context = context)
+                    if (index < imageLabelResults.lastIndex) HorizontalDivider()
                 }
             }
         }
@@ -406,22 +390,31 @@ private fun TextRecognitionBottomSheetContent(textResults: List<RecognizedText>,
 }
 
 @Composable
-private fun TextResultCard(recognizedText: RecognizedText, context: Context) {
-    val imageUri = recognizedText.imageUri
+private fun ImageLabelResultCard(imageLabelResult: ImageLabelResult, context: Context) {
+    val label = imageLabelResult.label
+    val imageUri = imageLabelResult.imageUri
 
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = Dimens.PaddingExtraSmall, vertical = Dimens.PaddingMedium),
+            .padding(Dimens.PaddingExtraSmall, vertical = Dimens.PaddingMedium),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Column(
             modifier = Modifier.weight(1f)
         ) {
-            Text(text = "Text:", style = MaterialTheme.typography.bodyLarge)
-            Text(text = recognizedText.text, style = MaterialTheme.typography.bodyMedium)
+            Text(text = "Label: ${label.text}", style = MaterialTheme.typography.bodyLarge)
+            Text(text = "Confidence: ${"%.2f".format(label.confidence)}", style = MaterialTheme.typography.bodyMedium)
         }
 
         DetectedActionImage(context, imageUri)
+    }
+}
+
+@androidx.compose.ui.tooling.preview.Preview(showBackground = true)
+@Composable
+fun ImageLabelingScreenPreview() {
+    MLAppTheme {
+        ImageLabelingScreen(navController = NavHostController(LocalContext.current))
     }
 }

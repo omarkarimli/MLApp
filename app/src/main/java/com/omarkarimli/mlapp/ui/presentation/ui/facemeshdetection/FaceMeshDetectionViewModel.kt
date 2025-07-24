@@ -1,4 +1,4 @@
-package com.omarkarimli.mlapp.ui.presentation.facemeshdetection
+package com.omarkarimli.mlapp.ui.presentation.ui.facemeshdetection
 
 import android.content.Context
 import android.graphics.Bitmap
@@ -8,6 +8,7 @@ import android.os.Build
 import android.provider.MediaStore
 import android.util.Log
 import android.util.Size
+import androidx.annotation.OptIn
 import androidx.camera.core.CameraSelector
 import androidx.camera.core.ExperimentalGetImage
 import androidx.camera.core.ImageProxy
@@ -17,6 +18,7 @@ import com.google.mlkit.vision.common.InputImage
 import com.google.mlkit.vision.facemesh.FaceMesh
 import com.google.mlkit.vision.facemesh.FaceMeshDetection
 import com.google.mlkit.vision.facemesh.FaceMeshDetectorOptions
+import com.omarkarimli.mlapp.domain.models.ScannedFaceMesh
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -26,12 +28,7 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
-data class ScannedFaceMesh(
-    val faceMesh: FaceMesh,
-    val imageUri: Uri? = null // Nullable for live scans
-)
-
-class FaceMeshDetectionViewModel : ViewModel() { // No longer implements ImageAnalysis.Analyzer
+class FaceMeshDetectionViewModel : ViewModel() {
 
     // ML Kit Face Mesh Detector instance for live analysis
     private val faceMeshDetectorOptions = FaceMeshDetectorOptions.Builder().build()
@@ -106,7 +103,7 @@ class FaceMeshDetectionViewModel : ViewModel() { // No longer implements ImageAn
     }
 
     // This function will be called from the CameraPreview's analyzer
-    @androidx.annotation.OptIn(ExperimentalGetImage::class)
+    @OptIn(ExperimentalGetImage::class)
     fun analyzeLiveFaceMesh(imageProxy: ImageProxy) {
         val mediaImage = imageProxy.image
         if (mediaImage != null) {

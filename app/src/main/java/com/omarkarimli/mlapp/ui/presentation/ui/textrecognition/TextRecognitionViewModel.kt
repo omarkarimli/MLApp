@@ -1,4 +1,4 @@
-package com.omarkarimli.mlapp.ui.presentation.textrecognition
+package com.omarkarimli.mlapp.ui.presentation.ui.textrecognition
 
 import android.content.Context
 import android.graphics.Bitmap
@@ -16,6 +16,7 @@ import androidx.lifecycle.viewModelScope
 import com.google.mlkit.vision.common.InputImage
 import com.google.mlkit.vision.text.TextRecognition
 import com.google.mlkit.vision.text.latin.TextRecognizerOptions
+import com.omarkarimli.mlapp.domain.models.RecognizedText
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -24,11 +25,6 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-
-data class RecognizedText(
-    val text: String,
-    val imageUri: Uri? = null // Nullable: null for live scans, non-null for picked images
-)
 
 @OptIn(ExperimentalGetImage::class)
 class TextRecognitionViewModel : ViewModel() {

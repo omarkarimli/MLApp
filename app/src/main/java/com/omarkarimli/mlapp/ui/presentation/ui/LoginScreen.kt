@@ -1,4 +1,4 @@
-package com.omarkarimli.mlapp.ui.presentation
+package com.omarkarimli.mlapp.ui.presentation.ui
 
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement

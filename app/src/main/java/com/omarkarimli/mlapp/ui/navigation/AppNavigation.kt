@@ -22,17 +22,17 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
-import com.omarkarimli.mlapp.ui.presentation.barcodescanning.BarcodeScanningScreen
-import com.omarkarimli.mlapp.ui.presentation.facemeshdetection.FaceMeshDetectionScreen
+import com.omarkarimli.mlapp.ui.presentation.ui.barcodescanning.BarcodeScanningScreen
+import com.omarkarimli.mlapp.ui.presentation.ui.facemeshdetection.FaceMeshDetectionScreen
 import com.omarkarimli.mycollab.ui.presentation.BookmarkScreen
-import com.omarkarimli.mlapp.ui.presentation.HomeScreen
-import com.omarkarimli.mlapp.ui.presentation.imagelabeling.ImageLabelingScreen
-import com.omarkarimli.mlapp.ui.presentation.LoginScreen
-import com.omarkarimli.mlapp.ui.presentation.objectdetection.ObjectDetectionScreen
-import com.omarkarimli.mlapp.ui.presentation.OnboardingScreen
-import com.omarkarimli.mlapp.ui.presentation.SettingsScreen
-import com.omarkarimli.mlapp.ui.presentation.SplashScreen
-import com.omarkarimli.mlapp.ui.presentation.textrecognition.TextRecognitionScreen
+import com.omarkarimli.mlapp.ui.presentation.ui.HomeScreen
+import com.omarkarimli.mlapp.ui.presentation.ui.imagelabeling.ImageLabelingScreen
+import com.omarkarimli.mlapp.ui.presentation.ui.LoginScreen
+import com.omarkarimli.mlapp.ui.presentation.ui.objectdetection.ObjectDetectionScreen
+import com.omarkarimli.mlapp.ui.presentation.ui.OnboardingScreen
+import com.omarkarimli.mlapp.ui.presentation.ui.SettingsScreen
+import com.omarkarimli.mlapp.ui.presentation.ui.SplashScreen
+import com.omarkarimli.mlapp.ui.presentation.ui.textrecognition.TextRecognitionScreen
 
 // Define a sealed class for bottom navigation destinations
 sealed class BottomBarDestination(

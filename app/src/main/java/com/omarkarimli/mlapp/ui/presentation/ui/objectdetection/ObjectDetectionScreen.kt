@@ -1,25 +1,23 @@
-package com.omarkarimli.mlapp.ui.presentation.facemeshdetection
+package com.omarkarimli.mlapp.ui.presentation.ui.objectdetection
 
 import android.Manifest
 import android.content.Context
-import android.graphics.Canvas
-import android.graphics.Color as GraphicsColor
 import android.graphics.Paint
 import android.net.Uri
 import android.os.Build
-import android.util.AttributeSet
 import android.util.Log
 import android.util.Size
-import android.view.View
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.camera.core.CameraSelector
+import androidx.camera.core.ExperimentalGetImage
 import androidx.camera.core.ImageAnalysis
 import androidx.camera.core.ImageProxy
 import androidx.camera.core.Preview
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.camera.view.PreviewView
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -67,7 +65,10 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -76,11 +77,15 @@ import androidx.core.content.ContextCompat
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
-import com.google.mlkit.vision.facemesh.FaceMesh
+import com.google.mlkit.vision.common.InputImage
+import com.google.mlkit.vision.objects.DetectedObject
+import com.google.mlkit.vision.objects.ObjectDetection
+import com.google.mlkit.vision.objects.defaults.ObjectDetectorOptions
 import com.omarkarimli.mlapp.ui.navigation.Screen
-import com.omarkarimli.mlapp.ui.presentation.components.DetectedActionImage
-import com.omarkarimli.mlapp.ui.presentation.components.CameraPermissionPlaceholder
+import com.omarkarimli.mlapp.ui.presentation.ui.components.CameraPermissionPlaceholder
+import com.omarkarimli.mlapp.ui.presentation.ui.components.DetectedActionImage
 import com.omarkarimli.mlapp.ui.theme.MLAppTheme
+import com.omarkarimli.mlapp.utils.Constants
 import com.omarkarimli.mlapp.utils.Dimens
 import kotlinx.coroutines.launch
 import java.util.concurrent.Executors
@@ -88,27 +93,27 @@ import kotlin.math.min
 
 @androidx.compose.ui.tooling.preview.Preview(showBackground = true)
 @Composable
-fun FaceMeshDetectionScreenPreview() {
+fun ObjectDetectionScreenPreview() {
     MLAppTheme {
-        FaceMeshDetectionScreen(navController = NavHostController(LocalContext.current))
+        ObjectDetectionScreen(navController = NavHostController(LocalContext.current))
     }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun FaceMeshDetectionScreen(navController: NavHostController) {
+fun ObjectDetectionScreen(navController: NavHostController) {
 
-    val viewModel: FaceMeshDetectionViewModel = viewModel()
+    val viewModel: ObjectDetectionViewModel = viewModel()
 
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
 
     val hasCameraPermission by viewModel.hasCameraPermission.collectAsState()
     val hasStoragePermission by viewModel.hasStoragePermission.collectAsState()
-    val faceMeshResults by viewModel.faceMeshResults.collectAsState() // Now collectAsState
+    val objectResults = viewModel.objectResults // This is already a mutableStateListOf, no need for by
     val cameraSelector by viewModel.cameraSelector.collectAsState()
-    val detectedFaceMeshesForOverlay by viewModel.detectedFaceMeshesForOverlay.collectAsState()
-    val imageSizeForOverlay by viewModel.imageSizeForOverlay.collectAsState()
+    val detectedObjectsForOverlay by viewModel.detectedObjectsForOverlay.collectAsState()
+    val currentImageSize by viewModel.currentImageSize.collectAsState()
 
     val sheetScaffoldState = rememberBottomSheetScaffoldState(
         bottomSheetState = rememberStandardBottomSheetState(
@@ -143,7 +148,7 @@ fun FaceMeshDetectionScreen(navController: NavHostController) {
         onResult = { uri: Uri? ->
             viewModel.onImagePicked(context, uri)
             // Expand sheet if results are available from picked image
-            if (faceMeshResults.any { it.imageUri != null }) { // Check if there are results specifically from picked images
+            if (objectResults.any { it.imageUri != null }) { // Check if there are results specifically from picked images
                 coroutineScope.launch {
                     if (sheetScaffoldState.bottomSheetState.currentValue != SheetValue.Expanded) {
                         sheetScaffoldState.bottomSheetState.expand()
@@ -172,7 +177,7 @@ fun FaceMeshDetectionScreen(navController: NavHostController) {
             TopAppBar(
                 title = {
                     Text(
-                        Screen.FaceMeshDetection.title,
+                        Screen.ObjectDetection.title,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
                     )
@@ -243,8 +248,8 @@ fun FaceMeshDetectionScreen(navController: NavHostController) {
                 BottomSheetDefaults.DragHandle()
             },
             sheetContent = {
-                BottomSheetContentFaceMeshes(
-                    faceMeshResults = faceMeshResults,
+                BottomSheetContentObjects(
+                    objectResults = objectResults,
                     context = context,
                     onFlipCamera = {
                         viewModel.onFlipCamera()
@@ -264,11 +269,18 @@ fun FaceMeshDetectionScreen(navController: NavHostController) {
                                 .weight(1f)
                                 .background(Color.Black, RoundedCornerShape(Dimens.CornerRadiusMedium)),
                             cameraSelector = cameraSelector,
-                            detectedFaceMeshes = detectedFaceMeshesForOverlay, // Pass data for overlay
-                            imageSize = imageSizeForOverlay, // Pass image size for overlay
-                            // Pass the ViewModel's analyzeLiveFaceMesh method as a lambda
-                            onImageProxyAnalyzed = { imageProxy ->
-                                viewModel.analyzeLiveFaceMesh(imageProxy)
+                            detectedObjects = detectedObjectsForOverlay,
+                            imageSize = currentImageSize,
+                            onObjectsDetected = { objects, imageWidth, imageHeight ->
+                                viewModel.onObjectsDetected(objects, imageWidth, imageHeight)
+                                if (objects.isNotEmpty()) {
+                                    coroutineScope.launch {
+                                        // Only partially expand if the sheet is currently hidden or collapsed
+                                        if (sheetScaffoldState.bottomSheetState.currentValue == SheetValue.Hidden) {
+                                            sheetScaffoldState.bottomSheetState.partialExpand()
+                                        }
+                                    }
+                                }
                             }
                         )
                     } else {
@@ -285,159 +297,29 @@ fun FaceMeshDetectionScreen(navController: NavHostController) {
     }
 }
 
-private class GraphicOverlay @JvmOverloads constructor(context: Context, attrs: AttributeSet? = null, defStyleAttr: Int = 0) : View(context, attrs, defStyleAttr) {
-
-    private val graphics = mutableListOf<Graphic>()
-    private var scaleFactor = 1f
-    private var translateX = 0f
-    private var translateY = 0f
-
-    // Dimensions of the original image/camera frame
-    private var imageWidth: Int = 0
-    private var imageHeight: Int = 0
-
-    // Dimensions of the view where graphics are drawn
-    private var overlayWidth: Int = 0
-    private var overlayHeight: Int = 0
-
-    abstract class Graphic(val overlay: GraphicOverlay) {
-        abstract fun draw(canvas: Canvas)
-
-        // Helper method for scaling and translating points from image coordinates to overlay coordinates
-        fun translateX(x: Float): Float = x * overlay.scaleFactor + overlay.translateX
-        fun translateY(y: Float): Float = y * overlay.scaleFactor + overlay.translateY
-    }
-
-    fun clear() {
-        graphics.clear()
-        postInvalidate() // Request a redraw
-    }
-
-    fun add(graphic: Graphic) {
-        graphics.add(graphic)
-    }
-
-    fun setImageSourceInfo(imageWidth: Int, imageHeight: Int) {
-        this.imageWidth = imageWidth
-        this.imageHeight = imageHeight
-        updateScaleAndTranslation()
-    }
-
-    override fun onSizeChanged(w: Int, h: Int, oldw: Int, oldh: Int) {
-        super.onSizeChanged(w, h, oldw, oldh)
-        overlayWidth = w
-        overlayHeight = h
-        updateScaleAndTranslation()
-    }
-
-    private fun updateScaleAndTranslation() {
-        if (imageWidth == 0 || imageHeight == 0 || overlayWidth == 0 || overlayHeight == 0) {
-            return
-        }
-
-        val scaleX = overlayWidth.toFloat() / imageWidth
-        val scaleY = overlayHeight.toFloat() / imageHeight
-        scaleFactor = min(scaleX, scaleY) * Dimens.FixedFaceMeshScaleFactor
-
-        translateX = (overlayWidth - imageWidth * scaleFactor) / 2 + Dimens.FixedFaceMeshPaddingX
-        translateY = (overlayHeight - imageHeight * scaleFactor) / 2 - Dimens.FixedFaceMeshPaddingY
-
-        postInvalidate() // Request a redraw with new scale/translation
-    }
-
-    override fun onDraw(canvas: Canvas) {
-        super.onDraw(canvas)
-        for (graphic in graphics) {
-            graphic.draw(canvas)
-        }
-    }
-}
-
-private class FaceMeshGraphic(overlay: GraphicOverlay, private val faceMesh: FaceMesh, private val isFrontCamera: Boolean) : GraphicOverlay.Graphic(overlay) {
-
-    private val meshPaint = Paint().apply {
-        color = GraphicsColor.WHITE
-        style = Paint.Style.STROKE
-        strokeWidth = 2f
-        isAntiAlias = true
-    }
-
-    private val pointPaint = Paint().apply {
-        color = GraphicsColor.CYAN
-        style = Paint.Style.FILL
-        strokeWidth = 4f
-        isAntiAlias = true
-    }
-
-    override fun draw(canvas: Canvas) {
-        // For front camera, we need to mirror the X coordinates
-        val mirrorX = { x: Float ->
-            if (isFrontCamera) overlay.width - translateX(x) else translateX(x)
-        }
-
-        // Draw all points
-        for (point in faceMesh.allPoints) {
-            canvas.drawCircle(
-                mirrorX(point.position.x),
-                translateY(point.position.y),
-                2f,
-                pointPaint
-            )
-        }
-
-        // Draw the mesh triangles
-        for (triangle in faceMesh.allTriangles) {
-            val p1 = triangle.allPoints[0].position
-            val p2 = triangle.allPoints[1].position
-            val p3 = triangle.allPoints[2].position
-
-            // Draw lines connecting the triangle points with mirroring for front camera
-            canvas.drawLine(
-                mirrorX(p1.x), translateY(p1.y),
-                mirrorX(p2.x), translateY(p2.y),
-                meshPaint
-            )
-            canvas.drawLine(
-                mirrorX(p2.x), translateY(p2.y),
-                mirrorX(p3.x), translateY(p3.y),
-                meshPaint
-            )
-            canvas.drawLine(
-                mirrorX(p3.x), translateY(p3.y),
-                mirrorX(p1.x), translateY(p1.y),
-                meshPaint
-            )
-        }
-    }
-}
-
+@androidx.annotation.OptIn(ExperimentalGetImage::class)
 @Composable
-fun CameraPreview(
+private fun CameraPreview(
     modifier: Modifier = Modifier,
-    // This is the new parameter: a lambda that takes an ImageProxy
-    // and is responsible for its analysis and closure.
-    onImageProxyAnalyzed: (ImageProxy) -> Unit,
     cameraSelector: CameraSelector,
-    detectedFaceMeshes: List<FaceMesh>, // Data for the overlay from ViewModel
-    imageSize: Size // Image size for the overlay from ViewModel
+    detectedObjects: List<DetectedObject>, // Passed from ViewModel
+    imageSize: Size, // Passed from ViewModel
+    onObjectsDetected: (List<DetectedObject>, Int, Int) -> Unit // Callback to ViewModel
 ) {
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
     val cameraExecutor = remember { Executors.newSingleThreadExecutor() }
     val cameraProviderFuture = remember { ProcessCameraProvider.getInstance(context) }
 
-    // State for the GraphicOverlay
-    val graphicOverlay = remember { GraphicOverlay(context) }
-
-    // Update GraphicOverlay when detectedFaceMeshes or imageSize changes
-    LaunchedEffect(detectedFaceMeshes, imageSize, cameraSelector) {
-        graphicOverlay.clear()
-        graphicOverlay.setImageSourceInfo(imageSize.width, imageSize.height)
-        detectedFaceMeshes.forEach { faceMesh ->
-            // Pass true for front camera, false for back camera
-            graphicOverlay.add(FaceMeshGraphic(graphicOverlay, faceMesh, cameraSelector == CameraSelector.DEFAULT_FRONT_CAMERA))
-        }
-        graphicOverlay.postInvalidate() // Request redraw for the overlay
+    // Initialize the object detector outside of the factory/update blocks
+    // so it's only created once per Composable lifecycle
+    val objectDetector = remember {
+        val options = ObjectDetectorOptions.Builder()
+            .setDetectorMode(ObjectDetectorOptions.STREAM_MODE)
+            .enableMultipleObjects()
+            .enableClassification()
+            .build()
+        ObjectDetection.getClient(options)
     }
 
     Box(modifier = modifier) {
@@ -445,7 +327,7 @@ fun CameraPreview(
             modifier = Modifier.fillMaxSize(),
             factory = { ctx ->
                 val previewView = PreviewView(ctx).apply {
-                    this.scaleType = PreviewView.ScaleType.FIT_START // Keep FIT_START or adjust as needed
+                    this.scaleType = PreviewView.ScaleType.FIT_START
                 }
                 cameraProviderFuture.addListener({
                     val cameraProvider = cameraProviderFuture.get()
@@ -456,13 +338,28 @@ fun CameraPreview(
                             it.surfaceProvider = previewView.surfaceProvider
                         }
 
-                    val imageAnalysis = ImageAnalysis.Builder()
+                    val imageAnalyzer = ImageAnalysis.Builder()
                         .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
                         .build()
                         .also {
-                            // Set the analyzer to call the provided lambda
-                            it.setAnalyzer(cameraExecutor) { imageProxy ->
-                                onImageProxyAnalyzed(imageProxy)
+                            it.setAnalyzer(cameraExecutor) { imageProxy: ImageProxy ->
+                                val mediaImage = imageProxy.image
+                                if (mediaImage != null) {
+                                    val image = InputImage.fromMediaImage(mediaImage, imageProxy.imageInfo.rotationDegrees)
+
+                                    objectDetector.process(image)
+                                        .addOnSuccessListener { detectedObjects ->
+                                            onObjectsDetected(detectedObjects, imageProxy.width, imageProxy.height)
+                                        }
+                                        .addOnFailureListener { e ->
+                                            Log.e("ObjectDetector", "Object detection failed: ${e.message}", e)
+                                        }
+                                        .addOnCompleteListener {
+                                            imageProxy.close()
+                                        }
+                                } else {
+                                    imageProxy.close()
+                                }
                             }
                         }
 
@@ -472,11 +369,10 @@ fun CameraPreview(
                             lifecycleOwner,
                             cameraSelector,
                             preview,
-                            imageAnalysis
+                            imageAnalyzer
                         )
                     } catch (exc: Exception) {
-                        Log.e("CameraPreview", "Use case binding failed", exc)
-                        Toast.makeText(context, "Error binding camera: ${exc.message}", Toast.LENGTH_SHORT).show()
+                        Log.e("ObjectDetector", "Use case binding failed", exc)
                     }
                 }, ContextCompat.getMainExecutor(ctx))
 
@@ -485,7 +381,7 @@ fun CameraPreview(
             update = { previewView ->
                 val cameraProvider = cameraProviderFuture.get()
 
-                // Unbind all use cases before rebinding, essential for camera switching
+                // Unbind all use cases before rebinding
                 cameraProvider.unbindAll()
 
                 val preview = Preview.Builder()
@@ -494,48 +390,64 @@ fun CameraPreview(
                         it.surfaceProvider = previewView.surfaceProvider
                     }
 
-                val imageAnalysis = ImageAnalysis.Builder()
+                val imageAnalyzer = ImageAnalysis.Builder()
                     .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
                     .build()
                     .also {
-                        // Re-set the analyzer when camera selector changes
-                        it.setAnalyzer(cameraExecutor) { imageProxy ->
-                            onImageProxyAnalyzed(imageProxy)
+                        it.setAnalyzer(cameraExecutor) { imageProxy: ImageProxy ->
+                            val mediaImage = imageProxy.image
+                            if (mediaImage != null) {
+                                val image = InputImage.fromMediaImage(mediaImage, imageProxy.imageInfo.rotationDegrees)
+
+                                objectDetector.process(image)
+                                    .addOnSuccessListener { detectedObjectsResult ->
+                                        onObjectsDetected(detectedObjectsResult, imageProxy.width, imageProxy.height)
+                                    }
+                                    .addOnFailureListener { e ->
+                                        Log.e("ObjectDetector", "Object detection failed: ${e.message}", e)
+                                    }
+                                    .addOnCompleteListener {
+                                        imageProxy.close()
+                                    }
+                            } else {
+                                imageProxy.close()
+                            }
                         }
                     }
 
                 try {
                     cameraProvider.bindToLifecycle(
                         lifecycleOwner,
-                        cameraSelector, // Use the updated camera selector
+                        cameraSelector,
                         preview,
-                        imageAnalysis
+                        imageAnalyzer
                     )
                 } catch (exc: Exception) {
-                    Log.e("CameraPreview", "Error switching camera: ${exc.message}", exc)
+                    Log.e("BarcodeScanner", "Use case binding failed", exc)
                     Toast.makeText(context, "Error switching camera: ${exc.message}", Toast.LENGTH_SHORT).show()
                 }
             }
         )
 
-        // Add the GraphicOverlay on top of the PreviewView
-        AndroidView(
-            modifier = Modifier.fillMaxSize(),
-            factory = { graphicOverlay }
+        GraphicOverlay(
+            detectedObjects = detectedObjects,
+            imageSize = imageSize,
+            modifier = Modifier.fillMaxSize()
         )
     }
 
-    // Shut down the camera executor when the composable leaves the composition
     DisposableEffect(Unit) {
         onDispose {
             cameraExecutor.shutdown()
+            // Important: Close the ObjectDetector to release resources
+            objectDetector.close()
         }
     }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun BottomSheetContentFaceMeshes(faceMeshResults: List<ScannedFaceMesh>, context: Context, onFlipCamera: () -> Unit) {
+private fun BottomSheetContentObjects(objectResults: List<ScannedObject>, context: Context, onFlipCamera: () -> Unit) {
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -549,7 +461,7 @@ private fun BottomSheetContentFaceMeshes(faceMeshResults: List<ScannedFaceMesh>,
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
             Text(
-                text = "Detected Face Meshes",
+                text = "Detected Objects",
                 modifier = Modifier.padding(bottom = Dimens.PaddingSmall),
                 textAlign = TextAlign.Start,
                 style = MaterialTheme.typography.titleLarge,
@@ -564,9 +476,9 @@ private fun BottomSheetContentFaceMeshes(faceMeshResults: List<ScannedFaceMesh>,
             }
         }
 
-        if (faceMeshResults.isEmpty()) {
+        if (objectResults.isEmpty()) {
             Text(
-                "No face meshes detected yet. Scan live or pick an image.",
+                "No objects detected yet. Scan live or pick an image.",
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(Dimens.PaddingSmall),
@@ -582,9 +494,9 @@ private fun BottomSheetContentFaceMeshes(faceMeshResults: List<ScannedFaceMesh>,
                     .heightIn(max = Dimens.BarcodeListMaxHeight),
                 contentPadding = PaddingValues(vertical = Dimens.PaddingExtraSmall)
             ) {
-                itemsIndexed(faceMeshResults) { index, scannedFaceMesh ->
-                    FaceMeshResultCard(scannedFaceMesh = scannedFaceMesh, context = context)
-                    if (index < faceMeshResults.lastIndex) HorizontalDivider()
+                itemsIndexed(objectResults) { index, scannedObject ->
+                    ObjectResultCard(scannedObject = scannedObject, context = context)
+                    if (index < objectResults.lastIndex) HorizontalDivider()
                 }
             }
         }
@@ -592,9 +504,9 @@ private fun BottomSheetContentFaceMeshes(faceMeshResults: List<ScannedFaceMesh>,
 }
 
 @Composable
-private fun FaceMeshResultCard(scannedFaceMesh: ScannedFaceMesh, context: Context) {
-    val faceMesh = scannedFaceMesh.faceMesh
-    val imageUri = scannedFaceMesh.imageUri
+private fun ObjectResultCard(scannedObject: ScannedObject, context: Context) {
+    val detectedObject = scannedObject.detectedObject
+    val imageUri = scannedObject.imageUri
 
     Row(
         modifier = Modifier
@@ -605,11 +517,85 @@ private fun FaceMeshResultCard(scannedFaceMesh: ScannedFaceMesh, context: Contex
         Column(
             modifier = Modifier.weight(1f)
         ) {
-            Text(text = "Bounding Box: ${faceMesh.boundingBox}", style = MaterialTheme.typography.bodySmall, color = Color.Gray)
-            Text(text = "Number of Points: ${faceMesh.allPoints.size}", style = MaterialTheme.typography.bodyLarge)
-            // You can add more details about face mesh here, e.g., specific contours
+            Text(text = "Bounding Box: ${detectedObject.boundingBox}", style = MaterialTheme.typography.bodySmall, color = Color.Gray)
+            detectedObject.labels.forEach { label ->
+                Text(text = "Label: ${label.text} (${"%.2f".format(label.confidence)})", style = MaterialTheme.typography.bodyLarge)
+            }
+            if (detectedObject.labels.isEmpty()) {
+                Text(text = "Label: N/A", style = MaterialTheme.typography.bodyLarge)
+            }
         }
 
         DetectedActionImage(context, imageUri)
+    }
+}
+
+@Composable
+private fun GraphicOverlay(detectedObjects: List<DetectedObject>, imageSize: Size, modifier: Modifier = Modifier) {
+    Canvas(modifier = modifier.fillMaxSize()) {
+        if (imageSize.width <= 0 || imageSize.height <= 0) return@Canvas
+
+        val scaleFactor = min(
+            size.width / imageSize.width.toFloat(),
+            size.height / imageSize.height.toFloat()
+        )
+
+        val offsetX = (size.width - imageSize.width * scaleFactor) / 2
+        val offsetY = (size.height - imageSize.height * scaleFactor) / 2
+
+        detectedObjects.forEach { detectedObject ->
+            val boundingBox = detectedObject.boundingBox
+
+            val left = boundingBox.left * scaleFactor + offsetX
+            val top = boundingBox.top * scaleFactor + offsetY
+            val right = boundingBox.right * scaleFactor + offsetX
+            val bottom = boundingBox.bottom * scaleFactor + offsetY
+
+            drawRect(
+                color = Color.White,
+                topLeft = Offset(left, top),
+                size = androidx.compose.ui.geometry.Size(right - left, bottom - top),
+                style = Stroke(width = Dimens.DrawLineStrokeWidth)
+            )
+
+            val labelText = detectedObject.labels.firstOrNull()?.text ?: Constants.NOT_APPLICABLE
+            val confidence = detectedObject.labels.firstOrNull()?.confidence?.let {
+                "%.1f%%".format(it * 100)
+            } ?: Constants.NOT_APPLICABLE
+            val fullText = "$labelText ($confidence)"
+
+            val textPaint = Paint().apply {
+                color = android.graphics.Color.BLACK
+                textSize = Dimens.DrawLabelTextSize
+                textAlign = Paint.Align.LEFT
+                isAntiAlias = true
+            }
+
+            val bgPaint = Paint().apply {
+                color = android.graphics.Color.WHITE
+                style = Paint.Style.FILL
+                isAntiAlias = true
+            }
+
+            val textX = left
+            val textY = top - 10f
+
+            val textWidth = textPaint.measureText(fullText)
+
+            drawContext.canvas.nativeCanvas.drawRect(
+                textX - 5f,
+                textY - 50f,
+                textX + textWidth + 5f,
+                textY + 5f,
+                bgPaint
+            )
+
+            drawContext.canvas.nativeCanvas.drawText(
+                fullText,
+                textX,
+                textY,
+                textPaint
+            )
+        }
     }
 }

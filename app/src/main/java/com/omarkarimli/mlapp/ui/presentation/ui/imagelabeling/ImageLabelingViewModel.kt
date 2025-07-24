@@ -1,4 +1,4 @@
-package com.omarkarimli.mlapp.ui.presentation.imagelabeling
+package com.omarkarimli.mlapp.ui.presentation.ui.imagelabeling
 
 import android.Manifest
 import android.content.Context
@@ -10,6 +10,7 @@ import android.os.Build
 import android.provider.MediaStore
 import android.util.Log
 import androidx.activity.result.ActivityResultLauncher
+import androidx.annotation.OptIn
 import androidx.camera.core.CameraSelector
 import androidx.camera.core.ExperimentalGetImage
 import androidx.camera.core.ImageProxy
@@ -20,17 +21,13 @@ import com.google.mlkit.vision.common.InputImage
 import com.google.mlkit.vision.label.ImageLabel
 import com.google.mlkit.vision.label.ImageLabeling
 import com.google.mlkit.vision.label.defaults.ImageLabelerOptions
+import com.omarkarimli.mlapp.domain.models.ImageLabelResult
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-
-data class ImageLabelResult(
-    val label: ImageLabel,
-    val imageUri: Uri? = null // Nullable for live scans
-)
 
 class ImageLabelingViewModel : ViewModel() {
 
@@ -154,7 +151,7 @@ class ImageLabelingViewModel : ViewModel() {
     }
 
     // New function to analyze ImageProxy directly in the ViewModel
-    @androidx.annotation.OptIn(ExperimentalGetImage::class)
+    @OptIn(ExperimentalGetImage::class)
     fun analyzeImageProxy(imageProxy: ImageProxy) {
         val mediaImage = imageProxy.image
         if (mediaImage != null) {
@@ -181,16 +178,19 @@ class ImageLabelingViewModel : ViewModel() {
 
     fun onLiveLabelsDetected(labels: List<ImageLabel>) {
         _imageLabelResults.update { currentList ->
-            val currentLiveLabels = currentList.filter { it.imageUri == null }.toSet()
-            val newLiveLabels = labels.map { ImageLabelResult(it, null) }.toSet()
+            val updatedList = currentList.toMutableList()
+            updatedList.removeAll { it.imageUri == null }
 
-            if (newLiveLabels != currentLiveLabels) {
-                val filteredList = currentList.filter { it.imageUri != null }.toMutableList()
-                filteredList.addAll(newLiveLabels)
-                filteredList.toList()
-            } else {
-                currentList
+            labels.forEach { newLabel ->
+                val isAlreadyPresent = updatedList.any { existingLabelResult ->
+                    existingLabelResult.imageUri == null && existingLabelResult.label.text == newLabel.text
+                }
+
+                if (!isAlreadyPresent) {
+                    updatedList.add(ImageLabelResult(newLabel, null))
+                }
             }
+            updatedList.toList() // Convert back to an immutable list for the StateFlow update
         }
     }
 

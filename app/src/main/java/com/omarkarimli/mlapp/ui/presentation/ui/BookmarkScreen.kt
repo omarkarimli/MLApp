@@ -45,7 +45,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavHostController
-import com.omarkarimli.mlapp.ui.presentation.ListItemModel
+import com.omarkarimli.mlapp.ui.presentation.ui.ListItemModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable

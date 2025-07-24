@@ -1,4 +1,4 @@
-package com.omarkarimli.mlapp.ui.presentation.barcodescanning
+package com.omarkarimli.mlapp.ui.presentation.ui.barcodescanning
 
 import android.Manifest
 import android.content.Context
@@ -36,9 +36,10 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
 import com.google.mlkit.vision.barcode.common.Barcode
+import com.omarkarimli.mlapp.domain.models.ScannedBarcode
 import com.omarkarimli.mlapp.ui.navigation.Screen
-import com.omarkarimli.mlapp.ui.presentation.components.DetectedActionImage
-import com.omarkarimli.mlapp.ui.presentation.components.CameraPermissionPlaceholder
+import com.omarkarimli.mlapp.ui.presentation.ui.components.DetectedActionImage
+import com.omarkarimli.mlapp.ui.presentation.ui.components.CameraPermissionPlaceholder
 import com.omarkarimli.mlapp.ui.theme.MLAppTheme
 import com.omarkarimli.mlapp.utils.Dimens
 import kotlinx.coroutines.launch
@@ -247,7 +248,7 @@ private fun BarcodeResultCard(scannedBarcode: ScannedBarcode, context: Context) 
     Row(modifier = Modifier.fillMaxWidth().padding(horizontal = Dimens.PaddingExtraSmall, vertical = Dimens.PaddingMedium), verticalAlignment = Alignment.CenterVertically) {
         Column(modifier = Modifier.weight(1f)) {
             Text("Format: ${getBarcodeFormatName(barcode.format)} (${getBarcodeValueTypeName(barcode.valueType)})", style = MaterialTheme.typography.bodyMedium, color = Color.Gray)
-            Text("Value: ${barcode.rawValue ?: "N/A"}", style = MaterialTheme.typography.bodyLarge)
+            Text(barcode.rawValue ?: "N/A", style = MaterialTheme.typography.bodyLarge)
         }
         DetectedActionImage(context, imageUri)
     }

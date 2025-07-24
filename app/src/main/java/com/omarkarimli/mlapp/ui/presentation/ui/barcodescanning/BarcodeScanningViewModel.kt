@@ -1,4 +1,4 @@
-package com.omarkarimli.mlapp.ui.presentation.barcodescanning
+package com.omarkarimli.mlapp.ui.presentation.ui.barcodescanning
 
 import android.Manifest
 import android.content.Context
@@ -20,6 +20,7 @@ import com.google.mlkit.vision.barcode.BarcodeScannerOptions
 import com.google.mlkit.vision.barcode.BarcodeScanning
 import com.google.mlkit.vision.barcode.common.Barcode
 import com.google.mlkit.vision.common.InputImage
+import com.omarkarimli.mlapp.domain.models.ScannedBarcode
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -27,8 +28,6 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-
-data class ScannedBarcode(val barcode: Barcode, val imageUri: Uri? = null)
 
 class BarcodeScanningViewModel : ViewModel() {
 

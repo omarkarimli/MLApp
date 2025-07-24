@@ -1,4 +1,4 @@
-package com.omarkarimli.mlapp.ui.presentation.objectdetection
+package com.omarkarimli.mlapp.ui.presentation.ui.objectdetection
 
 import android.content.Context
 import android.graphics.Bitmap
@@ -16,6 +16,7 @@ import com.google.mlkit.vision.common.InputImage
 import com.google.mlkit.vision.objects.DetectedObject
 import com.google.mlkit.vision.objects.ObjectDetection
 import com.google.mlkit.vision.objects.defaults.ObjectDetectorOptions
+import com.omarkarimli.mlapp.domain.models.ScannedObject
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -24,11 +25,6 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-
-data class ScannedObject(
-    val detectedObject: DetectedObject,
-    val imageUri: Uri? = null // Null for live scan, non-null for picked image
-)
 
 class ObjectDetectionViewModel : ViewModel() {
 
@@ -102,27 +98,39 @@ class ObjectDetectionViewModel : ViewModel() {
         }
     }
 
+
     fun onObjectsDetected(objects: List<DetectedObject>, imageWidth: Int, imageHeight: Int) {
         _detectedObjectsForOverlay.value = objects
         _currentImageSize.value = Size(imageWidth, imageHeight)
 
         // Filter out live scan results, then add new ones
-        val currentLiveObjects = _objectResults.filter { it.imageUri == null }.map { it.detectedObject.labels.firstOrNull()?.text to it.detectedObject.boundingBox }.toSet()
-        val newLiveObjects = objects.map { it.labels.firstOrNull()?.text to it.boundingBox }.toSet()
+        // We're moving away from the Set comparison for more granular control below.
 
-        if (newLiveObjects != currentLiveObjects) {
-            _objectResults.removeAll { it.imageUri == null } // Remove old live scan results
-            objects.forEach { newObject ->
-                // Only add if it's genuinely new to the live scan list
-                if (_objectResults.none { existingObject ->
-                        existingObject.imageUri == null &&
-                                existingObject.detectedObject.labels.firstOrNull()?.text == newObject.labels.firstOrNull()?.text &&
-                                existingObject.detectedObject.boundingBox == newObject.boundingBox
-                    }) {
-                    _objectResults.add(ScannedObject(newObject, null))
-                }
+        val updatedObjectResults = _objectResults.toMutableList() // Create a mutable copy to work with
+
+        // First, remove old live scan results to ensure we're processing the latest frame's objects
+        updatedObjectResults.removeAll { it.imageUri == null }
+
+        objects.forEach { newObject ->
+            // Create a unique identifier for the new live object based on its label and bounding box
+            val newObjectLabel = newObject.labels.firstOrNull()?.text
+            val newObjectBoundingBox = newObject.boundingBox
+
+            // Check if a similar live object already exists in the updated list
+            val isAlreadyPresent = updatedObjectResults.any { existingObject ->
+                existingObject.imageUri == null && // Only consider live scan objects
+                        existingObject.detectedObject.labels.firstOrNull()?.text == newObjectLabel &&
+                        existingObject.detectedObject.boundingBox == newObjectBoundingBox
+            }
+
+            // Only add if it's genuinely new to the live scan list
+            if (!isAlreadyPresent) {
+                updatedObjectResults.add(ScannedObject(newObject, null))
             }
         }
+
+        // Update the _objectResults with the new, de-duplicated list
+        _objectResults.addAll(updatedObjectResults)
     }
 
     fun onFlipCamera() {
