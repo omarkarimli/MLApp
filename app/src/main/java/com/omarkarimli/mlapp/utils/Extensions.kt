@@ -1,10 +1,21 @@
 package com.omarkarimli.mlapp.utils
 
-import androidx.compose.runtime.Composable
-import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.unit.Dp
+import androidx.compose.runtime.MutableState
+import com.omarkarimli.mlapp.ui.presentation.ui.components.CustomToastState
+import com.omarkarimli.mlapp.ui.presentation.ui.components.CustomToastType
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
-@Composable // This annotation is crucial
-fun Dp.toPxCustom(): Float {
-    return with(LocalDensity.current) { this@toPxCustom.toPx() }
+fun CoroutineScope.showCustomToast(
+    toastState: MutableState<CustomToastState>,
+    message: String? = null,
+    type: CustomToastType,
+    durationMillis: Long = 3000
+) {
+    this.launch {
+        toastState.value = CustomToastState(message, type, true)
+        delay(durationMillis)
+        toastState.value = toastState.value.copy(isVisible = false)
+    }
 }

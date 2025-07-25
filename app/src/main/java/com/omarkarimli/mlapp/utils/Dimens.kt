@@ -4,6 +4,14 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
 object Dimens {
+    // Toast
+    const val textAnimationDelayMillis: Long = 600L // Delay before text starts animating
+    const val textAnimationDurationMillis: Int = 1600 // Duration for text slide and fade
+    const val toastEntryExitDurationMillis: Int = 800 // Duration for toast slide-in/out
+
+    // Elevation
+    val ElevationMedium = 3.dp
+
     // Paddings
     val PaddingExtraSmall = 4.dp
     val PaddingSmall = 8.dp

@@ -81,6 +81,7 @@ import com.google.mlkit.vision.common.InputImage
 import com.google.mlkit.vision.objects.DetectedObject
 import com.google.mlkit.vision.objects.ObjectDetection
 import com.google.mlkit.vision.objects.defaults.ObjectDetectorOptions
+import com.omarkarimli.mlapp.domain.models.ScannedObject
 import com.omarkarimli.mlapp.ui.navigation.Screen
 import com.omarkarimli.mlapp.ui.presentation.ui.components.CameraPermissionPlaceholder
 import com.omarkarimli.mlapp.ui.presentation.ui.components.DetectedActionImage

@@ -2,6 +2,9 @@ plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
+
+    id("com.google.dagger.hilt.android")
+    id("com.google.devtools.ksp")
 }
 
 android {
@@ -103,4 +106,15 @@ dependencies {
     implementation("com.google.mlkit:text-recognition-japanese:16.0.1")
     // Korean
     implementation("com.google.mlkit:text-recognition-korean:16.0.1")
+
+    // Hilt
+    implementation("com.google.dagger:hilt-android:2.57") // Use the latest stable version
+    // kapt "com.google.dagger:hilt-android-compiler:2.51.1" // REMOVE THIS LINE
+    ksp("com.google.dagger:hilt-android-compiler:2.57") // ADD THIS LINE for KSP
+
+    // Hilt Navigation Compose
+    implementation("androidx.hilt:hilt-navigation-compose:1.2.0")
+
+    // ViewModel utilities for Compose
+    implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.8.5")
 }
