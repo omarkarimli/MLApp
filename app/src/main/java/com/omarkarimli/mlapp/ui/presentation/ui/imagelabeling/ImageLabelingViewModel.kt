@@ -1,212 +1,114 @@
 package com.omarkarimli.mlapp.ui.presentation.ui.imagelabeling
 
 import android.Manifest
-import android.content.Context
-import android.content.pm.PackageManager
-import android.graphics.Bitmap
-import android.graphics.ImageDecoder
 import android.net.Uri
-import android.os.Build
-import android.provider.MediaStore
-import android.util.Log
-import androidx.activity.result.ActivityResultLauncher
-import androidx.annotation.OptIn
 import androidx.camera.core.CameraSelector
-import androidx.camera.core.ExperimentalGetImage
 import androidx.camera.core.ImageProxy
-import androidx.core.content.ContextCompat
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.google.mlkit.vision.common.InputImage
-import com.google.mlkit.vision.label.ImageLabel
-import com.google.mlkit.vision.label.ImageLabeling
-import com.google.mlkit.vision.label.defaults.ImageLabelerOptions
 import com.omarkarimli.mlapp.domain.models.ImageLabelResult
-import kotlinx.coroutines.flow.MutableSharedFlow
+import com.omarkarimli.mlapp.domain.repository.ImageLabelingRepository
+import com.omarkarimli.mlapp.domain.repository.PermissionRepository
+import com.omarkarimli.mlapp.ui.presentation.ui.components.UiState
+import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.asSharedFlow
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import javax.inject.Inject
 
-class ImageLabelingViewModel : ViewModel() {
+@HiltViewModel
+class ImageLabelingViewModel @Inject constructor(
+    // Injects the PermissionRepository to manage camera and storage permissions.
+    val permissionRepository: PermissionRepository,
+    private val imageLabelingRepository: ImageLabelingRepository
+) : ViewModel() {
 
-    private val _hasCameraPermission = MutableStateFlow(false)
-    val hasCameraPermission = _hasCameraPermission.asStateFlow()
+    // MutableStateFlow to hold the current UI state (Idle, Loading, Error, PermissionAction).
+    private val _uiState = MutableStateFlow<UiState>(UiState.Idle)
+    // Exposed StateFlow for observing UI state changes.
+    val uiState: StateFlow<UiState> = _uiState.asStateFlow()
 
-    private val _hasStoragePermission = MutableStateFlow(false)
-    val hasStoragePermission = _hasStoragePermission.asStateFlow()
+    // MutableStateFlow to hold the list of scanned barcodes.
+    private val _labelingResults = MutableStateFlow<List<ImageLabelResult>>(emptyList())
+    val labelingResults: StateFlow<List<ImageLabelResult>> = _labelingResults.asStateFlow()
 
-    private val _imageLabelResults = MutableStateFlow<List<ImageLabelResult>>(emptyList())
-    val imageLabelResults = _imageLabelResults.asStateFlow()
-
+    // MutableStateFlow to control the active camera (front or back).
     private val _cameraSelector = MutableStateFlow(CameraSelector.DEFAULT_BACK_CAMERA)
-    val cameraSelector = _cameraSelector.asStateFlow()
+    // Exposed StateFlow for observing camera selection changes.
+    val cameraSelector: StateFlow<CameraSelector> = _cameraSelector.asStateFlow()
 
-    private val _toastMessage = MutableSharedFlow<String>()
-    val toastMessage = _toastMessage.asSharedFlow()
+    // StateFlows to observe the status of camera and storage permissions from the repository.
+    val hasCameraPermission: StateFlow<Boolean> = permissionRepository.cameraPermissionState
+    val hasStoragePermission: StateFlow<Boolean> = permissionRepository.storagePermissionState
 
-    // Initialize the ImageLabeler here
-    private val imageLabeler = ImageLabeling.getClient(ImageLabelerOptions.DEFAULT_OPTIONS)
-
-    fun onCameraPermissionResult(isGranted: Boolean) {
-        _hasCameraPermission.value = isGranted
-        if (!isGranted) {
-            viewModelScope.launch {
-                _toastMessage.emit("Camera permission is required for live labeling.")
-            }
-        }
+    init {
+        permissionRepository.notifyPermissionChanged(Manifest.permission.CAMERA)
+        permissionRepository.notifyPermissionChanged(permissionRepository.getStoragePermission())
     }
 
-    fun onStoragePermissionResult(isGranted: Boolean) {
-        _hasStoragePermission.value = isGranted
-        if (!isGranted) {
-            viewModelScope.launch {
-                _toastMessage.emit("Storage permission is required to pick photos.")
-            }
-        }
-    }
-
-    fun initializePermissions(context: Context) {
-        _hasCameraPermission.value = ContextCompat.checkSelfPermission(
-            context,
-            Manifest.permission.CAMERA
-        ) == PackageManager.PERMISSION_GRANTED
-        _hasStoragePermission.value = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            ContextCompat.checkSelfPermission(
-                context,
-                Manifest.permission.READ_MEDIA_IMAGES
-            ) == PackageManager.PERMISSION_GRANTED
-        } else {
-            ContextCompat.checkSelfPermission(
-                context,
-                Manifest.permission.READ_EXTERNAL_STORAGE
-            ) == PackageManager.PERMISSION_GRANTED
-        }
-    }
-
-    fun requestPermissions(cameraPermissionLauncher: ActivityResultLauncher<String>, storagePermissionLauncher: ActivityResultLauncher<String>) {
+    fun analyzeLiveLabel(imageProxy: ImageProxy) {
+        // Check for camera permission. If not granted, update UI state and close imageProxy.
         if (!hasCameraPermission.value) {
-            cameraPermissionLauncher.launch(Manifest.permission.CAMERA)
+            _uiState.value = UiState.PermissionAction(Manifest.permission.CAMERA)
+            imageProxy.close() // Crucial to close ImageProxy if not processed
+            return
         }
-        if (!hasStoragePermission.value) {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                storagePermissionLauncher.launch(Manifest.permission.READ_MEDIA_IMAGES)
-            } else {
-                storagePermissionLauncher.launch(Manifest.permission.READ_EXTERNAL_STORAGE)
+
+        // Launch a coroutine in the viewModelScope to perform asynchronous barcode scanning.
+        viewModelScope.launch {
+            // Call the repository to scan the live barcode.
+            val result = imageLabelingRepository.scanLive(imageProxy)
+            result.onSuccess { labels ->
+                // Convert ML Kit Barcode objects to custom ScannedBarcode domain models.
+                val newLabels = labels.map { label ->
+                    ImageLabelResult(label = label, imageUri = null) // imageUri is null for live scan
+                }
+                // Update the barcode results, ensuring no duplicates based on rawValue.
+                val updatedList = (_labelingResults.value + newLabels)
+                _labelingResults.value = updatedList
+            }.onFailure { e ->
+                // If scanning fails, update the UI state to an error state.
+                _uiState.value = UiState.Error("Live scanning failed: ${e.message}")
+            }
+            // The imageProxy is closed in the repository's finally block, so no need to close here again.
+        }
+    }
+
+    fun analyzeStaticImageForLabels(inputImage: InputImage, imageUri: Uri?) {
+        _uiState.value = UiState.Loading
+        // Launch a coroutine in the viewModelScope for asynchronous static image scanning.
+        viewModelScope.launch {
+            // Call the repository to scan the static image.
+            val result = imageLabelingRepository.scanStaticImage(inputImage)
+            result.onSuccess { labels ->
+                // Convert ML Kit Barcode objects to custom ScannedBarcode domain models,
+                // including the imageUri for static scans.
+                val newLabels = labels.map { label ->
+                    ImageLabelResult(label = label, imageUri = imageUri)
+                }
+                // Update the barcode results, ensuring no duplicates based on rawValue.
+                val updatedList = (_labelingResults.value + newLabels).distinctBy { it.imageUri }
+                _labelingResults.value = updatedList
+
+                // Reset UI state to Idle after successful scanning.
+                _uiState.value = UiState.Idle
+            }.onFailure { e ->
+                _uiState.value = UiState.Error(e.message.toString())
             }
         }
     }
 
-    fun analyzeImageFromUri(context: Context, uri: Uri?) {
-        uri?.let {
-            viewModelScope.launch {
-                val bitmap: Bitmap? = try {
-                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
-                        val source = ImageDecoder.createSource(context.contentResolver, it)
-                        ImageDecoder.decodeBitmap(source)
-                    } else {
-                        @Suppress("DEPRECATION")
-                        MediaStore.Images.Media.getBitmap(context.contentResolver, it)
-                    }
-                } catch (e: Exception) {
-                    Log.e("ImageLabelerViewModel", "Error decoding image: ${e.message}", e)
-                    _toastMessage.emit("Failed to decode image from gallery.")
-                    null
-                }
-
-                if (bitmap != null) {
-                    val image = InputImage.fromBitmap(bitmap, 0)
-
-                    imageLabeler.process(image)
-                        .addOnSuccessListener { labels ->
-                            val newLabelResults = labels.map { prevInstance -> ImageLabelResult(prevInstance, uri) }
-                            if (newLabelResults.isNotEmpty()) {
-                                _imageLabelResults.update { currentList ->
-                                    // Remove existing picked image results for this URI to avoid duplicates when re-picking same image
-                                    val filteredList = currentList.filter { currentInstance -> currentInstance.imageUri != uri }.toMutableList()
-                                    // Add new labels, ensuring no exact duplicates from this specific URI
-                                    newLabelResults.forEach { newLabel ->
-                                        if (filteredList.none { existingLabel -> existingLabel.label.text == newLabel.label.text && existingLabel.imageUri == newLabel.imageUri }) {
-                                            filteredList.add(newLabel)
-                                        }
-                                    }
-                                    filteredList.toList()
-                                }
-                            } else {
-                                viewModelScope.launch {
-                                    _toastMessage.emit("No labels found in the selected image.")
-                                }
-                            }
-                        }
-                        .addOnFailureListener { e ->
-                            Log.e("ImageLabelerViewModel", "Image labeling failed: ${e.message}", e)
-                            viewModelScope.launch {
-                                _toastMessage.emit("Error analyzing image: ${e.message}")
-                            }
-                        }
-                }
-            }
-        }
-    }
-
-    // New function to analyze ImageProxy directly in the ViewModel
-    @OptIn(ExperimentalGetImage::class)
-    fun analyzeImageProxy(imageProxy: ImageProxy) {
-        val mediaImage = imageProxy.image
-        if (mediaImage != null) {
-            val image = InputImage.fromMediaImage(mediaImage, imageProxy.imageInfo.rotationDegrees)
-
-            imageLabeler.process(image)
-                .addOnSuccessListener { labels ->
-                    // Call the existing onLiveLabelsDetected with the results
-                    if (labels.isNotEmpty()) {
-                        onLiveLabelsDetected(labels)
-                    }
-                }
-                .addOnFailureListener { e ->
-                    Log.e("ImageLabeler", "Image labeling failed: ${e.message}", e)
-                    // Optionally emit a toast or log for live analysis errors
-                }
-                .addOnCompleteListener {
-                    imageProxy.close() // Important: Close the imageProxy
-                }
-        } else {
-            imageProxy.close() // Important: Close the imageProxy even if mediaImage is null
-        }
-    }
-
-    fun onLiveLabelsDetected(labels: List<ImageLabel>) {
-        _imageLabelResults.update { currentList ->
-            val updatedList = currentList.toMutableList()
-            updatedList.removeAll { it.imageUri == null }
-
-            labels.forEach { newLabel ->
-                val isAlreadyPresent = updatedList.any { existingLabelResult ->
-                    existingLabelResult.imageUri == null && existingLabelResult.label.text == newLabel.text
-                }
-
-                if (!isAlreadyPresent) {
-                    updatedList.add(ImageLabelResult(newLabel, null))
-                }
-            }
-            updatedList.toList() // Convert back to an immutable list for the StateFlow update
-        }
-    }
-
-    fun onFlipCameraClicked() {
+    fun onFlipCamera() {
         _cameraSelector.value = if (_cameraSelector.value == CameraSelector.DEFAULT_BACK_CAMERA) {
-            Log.e("ImageLabelingViewModel", "Switching to front camera")
             CameraSelector.DEFAULT_FRONT_CAMERA
         } else {
-            Log.e("ImageLabelingViewModel", "Switching to back camera")
             CameraSelector.DEFAULT_BACK_CAMERA
         }
     }
 
-    fun onSaveClicked() {
-        viewModelScope.launch {
-            _toastMessage.emit("Save functionality not implemented yet.")
-        }
+    fun resetUiState() {
+        _uiState.value = UiState.Idle
     }
 }

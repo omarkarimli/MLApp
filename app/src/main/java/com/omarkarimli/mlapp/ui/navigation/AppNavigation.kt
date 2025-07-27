@@ -22,7 +22,6 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
-import com.omarkarimli.mlapp.ui.presentation.ui.barcodescanning.BarcodeScanningScreen
 import com.omarkarimli.mlapp.ui.presentation.ui.facemeshdetection.FaceMeshDetectionScreen
 import com.omarkarimli.mycollab.ui.presentation.BookmarkScreen
 import com.omarkarimli.mlapp.ui.presentation.ui.HomeScreen
@@ -32,6 +31,7 @@ import com.omarkarimli.mlapp.ui.presentation.ui.objectdetection.ObjectDetectionS
 import com.omarkarimli.mlapp.ui.presentation.ui.OnboardingScreen
 import com.omarkarimli.mlapp.ui.presentation.ui.SettingsScreen
 import com.omarkarimli.mlapp.ui.presentation.ui.SplashScreen
+import com.omarkarimli.mlapp.ui.presentation.ui.barcodescanning.BarcodeScanningScreen
 import com.omarkarimli.mlapp.ui.presentation.ui.textrecognition.TextRecognitionScreen
 
 // Define a sealed class for bottom navigation destinations
