@@ -1,137 +1,115 @@
 package com.omarkarimli.mlapp.ui.presentation.ui.barcodescanning
 
-import android.util.Log
-import androidx.annotation.OptIn
-import androidx.camera.core.CameraSelector
-import androidx.camera.core.ExperimentalGetImage
+import android.Manifest
+import android.net.Uri
 import androidx.camera.core.ImageProxy
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.google.mlkit.vision.barcode.BarcodeScannerOptions
-import com.google.mlkit.vision.barcode.BarcodeScanning
-import com.google.mlkit.vision.barcode.common.Barcode
 import com.google.mlkit.vision.common.InputImage
 import com.omarkarimli.mlapp.domain.models.ScannedBarcode
-import kotlinx.coroutines.Dispatchers
+import com.omarkarimli.mlapp.domain.repository.BarcodeScanningRepository
+import com.omarkarimli.mlapp.domain.repository.PermissionRepository
+import com.omarkarimli.mlapp.ui.presentation.ui.components.UiState
+import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import javax.inject.Inject
 
-// Note: No more MLRepository injection for permission checks, as they are now in the UI.
-// If you have other ML-related logic that needs a repository, keep it.
-// For this example, I'm removing the MLRepository dependency as it was only for permissions.
-class BarcodeScanningViewModel() : ViewModel() {
+@HiltViewModel
+class BarcodeScanningViewModel @Inject constructor(
+    // Injects the PermissionRepository to manage camera and storage permissions.
+    val permissionRepository: PermissionRepository,
+    // Injects the BarcodeScanningRepository to perform barcode scanning operations.
+    private val barcodeRepository: BarcodeScanningRepository
+) : ViewModel() {
 
-    // Represents the UI state for barcode scanning
-    sealed class BarcodeScanUiState {
-        object Idle : BarcodeScanUiState()
-        object Loading : BarcodeScanUiState()
-        data class Error(val message: String) : BarcodeScanUiState()
-    }
+    // MutableStateFlow to hold the current UI state (Idle, Loading, Error, PermissionAction).
+    private val _uiState = MutableStateFlow<UiState>(UiState.Idle)
+    // Exposed StateFlow for observing UI state changes.
+    val uiState: StateFlow<UiState> = _uiState.asStateFlow()
 
-    private val _uiState = MutableStateFlow<BarcodeScanUiState>(BarcodeScanUiState.Idle)
-    val uiState: StateFlow<BarcodeScanUiState> = _uiState.asStateFlow()
-
-    // Permissions are managed directly in the UI now.
-    // _hasCameraPermission and _hasStoragePermission are removed.
-
-    private val _barcodeResults = MutableStateFlow<MutableList<ScannedBarcode>>(mutableListOf())
+    // MutableStateFlow to hold the list of scanned barcodes.
+    private val _barcodeResults = MutableStateFlow<List<ScannedBarcode>>(emptyList())
+    // Exposed StateFlow for observing scanned barcode results.
     val barcodeResults: StateFlow<List<ScannedBarcode>> = _barcodeResults.asStateFlow()
 
-    private val _cameraSelector = MutableStateFlow(CameraSelector.DEFAULT_BACK_CAMERA)
-    val cameraSelector: StateFlow<CameraSelector> = _cameraSelector.asStateFlow()
+    // MutableStateFlow to control the active camera (front or back).
+    private val _cameraSelector = MutableStateFlow(androidx.camera.core.CameraSelector.DEFAULT_BACK_CAMERA)
+    // Exposed StateFlow for observing camera selection changes.
+    val cameraSelector: StateFlow<androidx.camera.core.CameraSelector> = _cameraSelector.asStateFlow()
 
-    // _shouldExpandBottomSheet is removed. UI will observe barcodeResults.size directly.
+    // StateFlows to observe the status of camera and storage permissions from the repository.
+    val hasCameraPermission: StateFlow<Boolean> = permissionRepository.cameraPermissionState
+    val hasStoragePermission: StateFlow<Boolean> = permissionRepository.storagePermissionState
 
-    // Barcode scanner instance for live camera analysis
-    private val barcodeScannerOptions = BarcodeScannerOptions.Builder().setBarcodeFormats(Barcode.FORMAT_ALL_FORMATS).build()
-    private val liveBarcodeScanner = BarcodeScanning.getClient(barcodeScannerOptions)
-
-    // setCameraPermission and setStoragePermission are removed as they are no longer needed here.
-    // initializePermissions is removed.
-
-    fun onBarcodeDetected(barcodes: List<Barcode>, sourceImageUri: android.net.Uri? = null) {
-        val currentResults = _barcodeResults.value
-        val newBarcodes = barcodes.filter { newBarcode ->
-            currentResults.none { it.barcode.rawValue == newBarcode.rawValue }
-        }.map { ScannedBarcode(it, sourceImageUri) }
-
-        if (newBarcodes.isNotEmpty()) {
-            _barcodeResults.update { (it + newBarcodes).toMutableList() }
-            // _shouldExpandBottomSheet.value = true; -- REMOVED
-            _uiState.value = BarcodeScanUiState.Idle // Reset UI state after success
-        } else {
-            _uiState.value = BarcodeScanUiState.Idle
-        }
+    init {
+        permissionRepository.notifyPermissionChanged(Manifest.permission.CAMERA)
+        permissionRepository.notifyPermissionChanged(permissionRepository.getStoragePermission())
     }
 
-    @OptIn(ExperimentalGetImage::class)
     fun analyzeLiveBarcode(imageProxy: ImageProxy) {
-        val mediaImage = imageProxy.image
-        if (mediaImage != null) {
-            _uiState.value = BarcodeScanUiState.Loading // Indicate loading for live analysis
-            val image = InputImage.fromMediaImage(mediaImage, imageProxy.imageInfo.rotationDegrees)
-            liveBarcodeScanner.process(image)
-                .addOnSuccessListener { barcodes ->
-                    if (barcodes.isNotEmpty()) {
-                        onBarcodeDetected(barcodes, null) // No specific URI for live camera
-                    } else {
-                        _uiState.value = BarcodeScanUiState.Idle // No barcodes found, but no error
-                    }
+        // Check for camera permission. If not granted, update UI state and close imageProxy.
+        if (!hasCameraPermission.value) {
+            _uiState.value = UiState.PermissionAction(Manifest.permission.CAMERA)
+            imageProxy.close() // Crucial to close ImageProxy if not processed
+            return
+        }
+
+        // Launch a coroutine in the viewModelScope to perform asynchronous barcode scanning.
+        viewModelScope.launch {
+            // Call the repository to scan the live barcode.
+            val result = barcodeRepository.scanLiveBarcode(imageProxy)
+            result.onSuccess { barcodes ->
+                // Convert ML Kit Barcode objects to custom ScannedBarcode domain models.
+                val newScannedBarcodes = barcodes.map { barcode ->
+                    ScannedBarcode(barcode = barcode, imageUri = null) // imageUri is null for live scan
                 }
-                .addOnFailureListener { e ->
-                    Log.e("BarcodeScannerVM", "Live barcode scanning failed: ${e.message}", e)
-                    _uiState.value = BarcodeScanUiState.Error("Failed to scan live barcode: ${e.message}")
-                }
-                .addOnCompleteListener { imageProxy.close() }
-        } else {
-            imageProxy.close()
-            _uiState.value = BarcodeScanUiState.Error("Failed to get image from ImageProxy.")
+                // Update the barcode results, ensuring no duplicates based on rawValue.
+                val updatedList = (_barcodeResults.value + newScannedBarcodes).distinctBy { it.barcode.rawValue }
+                _barcodeResults.value = updatedList
+            }.onFailure { e ->
+                // If scanning fails, update the UI state to an error state.
+                _uiState.value = UiState.Error("Live scanning failed: ${e.message}")
+            }
+            // The imageProxy is closed in the repository's finally block, so no need to close here again.
         }
     }
 
-    fun analyzeStaticImageForBarcodes(inputImage: InputImage, imageUri: android.net.Uri?) {
-        _uiState.value = BarcodeScanUiState.Loading // Indicate loading for image analysis
-        viewModelScope.launch(Dispatchers.IO) {
-            try {
-                val options = BarcodeScannerOptions.Builder().setBarcodeFormats(Barcode.FORMAT_ALL_FORMATS).build()
-                val scanner = BarcodeScanning.getClient(options) // Use a new scanner for static images
-                scanner.process(inputImage)
-                    .addOnSuccessListener { barcodes ->
-                        if (barcodes.isNotEmpty()) {
-                            onBarcodeDetected(barcodes, imageUri)
-                        } else {
-                            // No new barcodes found in the selected image, but analysis was successful
-                            _uiState.value = BarcodeScanUiState.Error("No barcodes found in the selected image.")
-                        }
-                    }
-                    .addOnFailureListener { e ->
-                        Log.e("BarcodeScannerVM", "Static image barcode scanning failed: ${e.message}", e)
-                        _uiState.value = BarcodeScanUiState.Error("Error analyzing image: ${e.message}")
-                    }
-            } catch (e: Exception) {
-                Log.e("BarcodeScannerVM", "Unexpected error during static image analysis: ${e.message}", e)
-                _uiState.value = BarcodeScanUiState.Error("Unexpected error during image analysis: ${e.message}")
+    fun analyzeStaticImageForBarcodes(inputImage: InputImage, imageUri: Uri?) {
+        _uiState.value = UiState.Loading
+        // Launch a coroutine in the viewModelScope for asynchronous static image scanning.
+        viewModelScope.launch {
+            // Call the repository to scan the static image.
+            val result = barcodeRepository.scanStaticImageForBarcodes(inputImage)
+            result.onSuccess { barcodes ->
+                // Convert ML Kit Barcode objects to custom ScannedBarcode domain models,
+                // including the imageUri for static scans.
+                val newScannedBarcodes = barcodes.map { barcode ->
+                    ScannedBarcode(barcode = barcode, imageUri = imageUri)
+                }
+                // Update the barcode results, ensuring no duplicates based on rawValue.
+                val updatedList = (_barcodeResults.value + newScannedBarcodes).distinctBy { it.barcode.rawValue }
+                _barcodeResults.value = updatedList
+
+                // Reset UI state to Idle after successful scanning.
+                _uiState.value = UiState.Idle
+            }.onFailure { e ->
+                _uiState.value = UiState.Error(e.message.toString())
             }
         }
     }
 
     fun onFlipCamera() {
-        _cameraSelector.value = if (_cameraSelector.value == CameraSelector.DEFAULT_BACK_CAMERA) {
-            Log.d("BarcodeScreen", "Switching to front camera")
-            CameraSelector.DEFAULT_FRONT_CAMERA
+        _cameraSelector.value = if (_cameraSelector.value == androidx.camera.core.CameraSelector.DEFAULT_BACK_CAMERA) {
+            androidx.camera.core.CameraSelector.DEFAULT_FRONT_CAMERA
         } else {
-            Log.d("BarcodeScreen", "Switching to back camera")
-            CameraSelector.DEFAULT_BACK_CAMERA
+            androidx.camera.core.CameraSelector.DEFAULT_BACK_CAMERA
         }
     }
 
-    // resetBottomSheetExpansion is removed. UI will manage its own sheet expansion.
-
-    // Reset the UI state to Idle, typically after an error has been displayed
     fun resetUiState() {
-        _uiState.value = BarcodeScanUiState.Idle
+        _uiState.value = UiState.Idle
     }
 }

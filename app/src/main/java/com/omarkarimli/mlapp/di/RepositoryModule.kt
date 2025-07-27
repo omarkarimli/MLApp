@@ -1,7 +1,11 @@
 package com.omarkarimli.mlapp.di
 
+import com.omarkarimli.mlapp.data.repository.BarcodeScanningRepositoryImpl
 import com.omarkarimli.mlapp.data.repository.MLRepositoryImpl
+import com.omarkarimli.mlapp.data.repository.PermissionRepositoryImpl
+import com.omarkarimli.mlapp.domain.repository.BarcodeScanningRepository
 import com.omarkarimli.mlapp.domain.repository.MLRepository
+import com.omarkarimli.mlapp.domain.repository.PermissionRepository
 import dagger.Binds
 import dagger.Module
 import dagger.hilt.InstallIn
@@ -17,4 +21,16 @@ abstract class RepositoryModule {
     abstract fun bindMLRepository(
         mlRepositoryImpl: MLRepositoryImpl
     ): MLRepository
+
+    @Binds
+    @Singleton
+    abstract fun bindPermissionRepository(
+        permissionRepositoryImpl: PermissionRepositoryImpl
+    ): PermissionRepository
+
+    @Binds
+    @Singleton
+    abstract fun bindBarcodeScanningRepository(
+        barcodeScanningRepositoryImpl: BarcodeScanningRepositoryImpl
+    ): BarcodeScanningRepository
 }

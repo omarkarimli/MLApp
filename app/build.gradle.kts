@@ -117,4 +117,7 @@ dependencies {
 
     // ViewModel utilities for Compose
     implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.8.5")
+
+    // Coroutines
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-play-services:1.10.2")
 }
