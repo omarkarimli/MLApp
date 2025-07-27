@@ -31,6 +31,9 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.omarkarimli.mlapp.domain.models.toResultCards
+import com.omarkarimli.mlapp.ui.presentation.ui.components.BottomSheetContent
+import com.omarkarimli.mlapp.ui.presentation.ui.components.CameraPreview
 import com.omarkarimli.mlapp.ui.presentation.ui.components.UiState
 import com.omarkarimli.mlapp.utils.showToast
 
@@ -203,8 +206,7 @@ fun BarcodeScanningScreen(navController: NavHostController) {
                 sheetShape = RoundedCornerShape(topStart = Dimens.CornerRadiusLarge, topEnd = Dimens.CornerRadiusLarge),
                 sheetDragHandle = { BottomSheetDefaults.DragHandle() },
                 sheetContent = {
-                    // Pass the barcodeResults (which is now List<ScannedBarcode>)
-                    BarcodeBottomSheetContent(barcodeResults, onFlipCamera = {
+                    BottomSheetContent(barcodeResults.toResultCards(), onFlipCamera = {
                         viewModel.onFlipCamera()
                     })
                 },
@@ -214,13 +216,20 @@ fun BarcodeScanningScreen(navController: NavHostController) {
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
                         if (hasCameraPermission) {
-                            BarcodeCameraPreview(
+                            CameraPreview(
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .weight(1f)
-                                    .background(Color.Black, RoundedCornerShape(Dimens.CornerRadiusMedium)),
+                                    .background(
+                                        Color.Black,
+                                        RoundedCornerShape(Dimens.CornerRadiusMedium)
+                                    ),
                                 cameraSelector = cameraSelector,
-                                analyzeLiveBarcode = { imageProxy -> viewModel.analyzeLiveBarcode(imageProxy) }
+                                analyzeLive = { imageProxy ->
+                                    viewModel.analyzeLiveBarcode(
+                                        imageProxy
+                                    )
+                                }
                             )
                         } else {
                             CameraPermissionPlaceholder(

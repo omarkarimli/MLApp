@@ -1,4 +1,4 @@
-package com.omarkarimli.mlapp.ui.presentation.ui.barcodescanning
+package com.omarkarimli.mlapp.ui.presentation.ui.components
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -23,12 +23,12 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
-import com.omarkarimli.mlapp.domain.models.ScannedBarcode
+import com.omarkarimli.mlapp.domain.models.ResultCardModel
 import com.omarkarimli.mlapp.utils.Dimens
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun BarcodeBottomSheetContent(barcodeResults: List<ScannedBarcode>, onFlipCamera: () -> Unit) {
+fun BottomSheetContent(resultCards: List<ResultCardModel>, onFlipCamera: () -> Unit) {
     Column(modifier = Modifier.fillMaxWidth().padding(horizontal = Dimens.PaddingMedium), horizontalAlignment = Alignment.CenterHorizontally) {
         Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
             Text("Detected Barcodes", modifier = Modifier.padding(bottom = Dimens.PaddingSmall), textAlign = TextAlign.Start, style = MaterialTheme.typography.titleLarge, maxLines = 1, overflow = TextOverflow.Ellipsis)
@@ -36,13 +36,13 @@ fun BarcodeBottomSheetContent(barcodeResults: List<ScannedBarcode>, onFlipCamera
                 Icon(Icons.Rounded.FlipCameraIos, contentDescription = "Flip Camera")
             }
         }
-        if (barcodeResults.isEmpty()) {
-            Text("No barcodes detected yet. Scan live or pick an image.", modifier = Modifier.fillMaxWidth().padding(Dimens.PaddingSmall), textAlign = TextAlign.Start, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        if (resultCards.isEmpty()) {
+            Text("Nothing detected yet. Scan live or pick an image.", modifier = Modifier.fillMaxWidth().padding(Dimens.PaddingSmall), textAlign = TextAlign.Start, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
         } else {
             LazyColumn(modifier = Modifier.fillMaxWidth().heightIn(max = Dimens.BarcodeListMaxHeight), contentPadding = PaddingValues(vertical = Dimens.PaddingExtraSmall)) {
-                itemsIndexed(barcodeResults) { index, scannedBarcode ->
-                    BarcodeResultCard(scannedBarcode)
-                    if (index < barcodeResults.lastIndex) HorizontalDivider()
+                itemsIndexed(resultCards) { index, resultCard ->
+                    ResultCard(resultCard)
+                    if (index < resultCards.lastIndex) HorizontalDivider()
                 }
             }
         }

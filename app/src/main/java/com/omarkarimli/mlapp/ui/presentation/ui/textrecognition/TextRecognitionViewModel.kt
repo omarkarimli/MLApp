@@ -1,212 +1,108 @@
 package com.omarkarimli.mlapp.ui.presentation.ui.textrecognition
 
-import android.content.Context
-import android.graphics.Bitmap
-import android.graphics.ImageDecoder
+import android.Manifest
 import android.net.Uri
-import android.os.Build
-import android.provider.MediaStore
-import android.util.Log
-import androidx.annotation.OptIn
-import androidx.camera.core.CameraSelector
-import androidx.camera.core.ExperimentalGetImage
-import androidx.camera.core.ImageAnalysis
+import androidx.camera.core.ImageProxy
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.google.mlkit.vision.common.InputImage
-import com.google.mlkit.vision.text.TextRecognition
-import com.google.mlkit.vision.text.latin.TextRecognizerOptions
 import com.omarkarimli.mlapp.domain.models.RecognizedText
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.flow.MutableSharedFlow
+import com.omarkarimli.mlapp.domain.models.ScannedBarcode
+import com.omarkarimli.mlapp.domain.repository.PermissionRepository
+import com.omarkarimli.mlapp.domain.repository.TextRecognitionRepository // Import TextRecognitionRepository
+import com.omarkarimli.mlapp.ui.presentation.ui.components.UiState
+import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.asSharedFlow
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
+import javax.inject.Inject
 
-@OptIn(ExperimentalGetImage::class)
-class TextRecognitionViewModel : ViewModel() {
+@HiltViewModel
+class TextRecognitionViewModel @Inject constructor(
+    // Injects the PermissionRepository to manage camera and storage permissions.
+    val permissionRepository: PermissionRepository,
+    // Injects the TextRecognitionRepository to perform text recognition operations.
+    private val textRecognitionRepository: TextRecognitionRepository
+) : ViewModel() {
 
-    private val _hasCameraPermission = MutableStateFlow(false)
-    val hasCameraPermission = _hasCameraPermission.asStateFlow()
+    // MutableStateFlow to hold the current UI state (Idle, Loading, Error, PermissionAction).
+    private val _uiState = MutableStateFlow<UiState>(UiState.Idle)
+    // Exposed StateFlow for observing UI state changes.
+    val uiState: StateFlow<UiState> = _uiState.asStateFlow()
 
-    private val _hasStoragePermission = MutableStateFlow(false)
-    val hasStoragePermission = _hasStoragePermission.asStateFlow()
-
+    // MutableStateFlow to hold the recognized text result.
     private val _textResults = MutableStateFlow<List<RecognizedText>>(emptyList())
-    val textResults = _textResults.asStateFlow()
+    // Exposed StateFlow for observing scanned barcode results.
+    val textResults: StateFlow<List<RecognizedText>> = _textResults.asStateFlow()
 
-    private val _cameraSelector = MutableStateFlow(CameraSelector.DEFAULT_BACK_CAMERA)
-    val cameraSelector = _cameraSelector.asStateFlow()
+    // MutableStateFlow to control the active camera (front or back).
+    private val _cameraSelector = MutableStateFlow(androidx.camera.core.CameraSelector.DEFAULT_BACK_CAMERA)
+    // Exposed StateFlow for observing camera selection changes.
+    val cameraSelector: StateFlow<androidx.camera.core.CameraSelector> = _cameraSelector.asStateFlow()
 
-    private val _toastMessage = MutableSharedFlow<String>()
-    val toastMessage = _toastMessage.asSharedFlow()
+    // StateFlows to observe the status of camera and storage permissions from the repository.
+    val hasCameraPermission: StateFlow<Boolean> = permissionRepository.cameraPermissionState
+    val hasStoragePermission: StateFlow<Boolean> = permissionRepository.storagePermissionState
 
-    // ML Kit Text Recognizer instance
-    private val textRecognizer = TextRecognition.getClient(TextRecognizerOptions.DEFAULT_OPTIONS)
+    init {
+        // Initialize permission states when the ViewModel is created.
+        permissionRepository.notifyPermissionChanged(Manifest.permission.CAMERA)
+        permissionRepository.notifyPermissionChanged(permissionRepository.getStoragePermission())
+    }
 
-    fun updateCameraPermission(isGranted: Boolean) {
-        _hasCameraPermission.value = isGranted
-        if (!isGranted) {
-            viewModelScope.launch {
-                _toastMessage.emit("Camera permission is required for live scanning.")
+    fun analyzeLiveText(imageProxy: ImageProxy) {
+        // Check for camera permission. If not granted, update UI state and close imageProxy.
+        if (!hasCameraPermission.value) {
+            _uiState.value = UiState.PermissionAction(Manifest.permission.CAMERA)
+            imageProxy.close() // Crucial to close ImageProxy if not processed
+            return
+        }
+
+        // Launch a coroutine in the viewModelScope to perform asynchronous text recognition.
+        viewModelScope.launch {
+            // Call the repository to scan the live image for text.
+            val result = textRecognitionRepository.scanLive(imageProxy)
+            result.onSuccess { recognizedText ->
+                // Update the barcode results, ensuring no duplicates based on rawValue.
+                val updatedList = (_textResults.value + RecognizedText(recognizedText, null)).distinctBy { it.text }
+                _textResults.value = updatedList
+            }.onFailure { e ->
+                // If scanning fails, update the UI state to an error state.
+                if (e.message.toString().trim().isNotEmpty()) _uiState.value = UiState.Error(e.message.toString())
             }
+            // The imageProxy is closed in the repository's finally block, so no need to close here again.
         }
     }
 
-    fun updateStoragePermission(isGranted: Boolean) {
-        _hasStoragePermission.value = isGranted
-        if (!isGranted) {
-            viewModelScope.launch {
-                _toastMessage.emit("Storage permission is required to pick photos.")
-            }
-        }
-    }
-
-    fun onImagePicked(context: Context, uri: Uri?) {
-        uri?.let { pickedUri ->
-            viewModelScope.launch {
-                analyzeImageForText(context, pickedUri) { newPickedText ->
-                    _textResults.update { currentResults ->
-                        val updatedList = currentResults.filter { it.imageUri == null }.toMutableList()
-
-                        if (newPickedText != null) {
-                            updatedList.add(newPickedText)
-                        } else {
-                            launch {
-                                _toastMessage.emit("No text found in the selected image.")
-                            }
-                        }
-                        updatedList
-                    }
-                }
-            }
-        } ?: viewModelScope.launch {
-            _toastMessage.emit("No image selected.")
-        }
-    }
-
-    fun onLiveTextDetected(recognizedText: String) {
-        if (recognizedText.isNotEmpty()) {
-            _textResults.update { currentResults ->
-                // Check if the recognizedText already exists in the list
-                val isAlreadyPresent = currentResults.any { it.text == recognizedText }
-
-                if (!isAlreadyPresent) {
-                    // If it's not already present, add the new live text result
-                    val updatedList = currentResults.toMutableList()
-                    updatedList.add(RecognizedText(recognizedText, null))
-                    updatedList // Return the updated list
-                } else {
-                    currentResults // Return the current list unchanged
-                }
+    fun analyzeStaticImageForText(inputImage: InputImage, imageUri: Uri?) {
+        _uiState.value = UiState.Loading // Set UI state to loading during processing.
+        // Launch a coroutine in the viewModelScope for asynchronous static image text recognition.
+        viewModelScope.launch {
+            // Call the repository to scan the static image for text.
+            val result = textRecognitionRepository.scanStaticImage(inputImage)
+            result.onSuccess { recognizedText ->
+                // Update the recognized text result.
+                val updatedList = (_textResults.value + RecognizedText(recognizedText, imageUri)).distinctBy { it.text }
+                _textResults.value = updatedList
+                // Reset UI state to Idle after successful scanning.
+                _uiState.value = UiState.Idle
+            }.onFailure { e ->
+                // If scanning fails, update the UI state to an error state.
+                _uiState.value = UiState.Error(e.message.toString())
             }
         }
     }
 
     fun onFlipCamera() {
-        _cameraSelector.update { currentSelector ->
-            if (currentSelector == CameraSelector.DEFAULT_BACK_CAMERA) {
-                Log.d("TextRecognitionViewModel", "Switching to front camera")
-                CameraSelector.DEFAULT_FRONT_CAMERA
-            } else {
-                Log.d("TextRecognitionViewModel", "Switching to back camera")
-                CameraSelector.DEFAULT_BACK_CAMERA
-            }
+        _cameraSelector.value = if (_cameraSelector.value == androidx.camera.core.CameraSelector.DEFAULT_BACK_CAMERA) {
+            androidx.camera.core.CameraSelector.DEFAULT_FRONT_CAMERA
+        } else {
+            androidx.camera.core.CameraSelector.DEFAULT_BACK_CAMERA
         }
     }
 
-    fun onSaveClicked() {
-        viewModelScope.launch {
-            _toastMessage.emit("Save functionality not implemented yet.")
-        }
-    }
-
-    fun createImageAnalyzer(): ImageAnalysis.Analyzer {
-        return ImageAnalysis.Analyzer { imageProxy ->
-            val mediaImage = imageProxy.image
-            if (mediaImage != null) {
-                val image = InputImage.fromMediaImage(mediaImage, imageProxy.imageInfo.rotationDegrees)
-
-                textRecognizer.process(image)
-                    .addOnSuccessListener { visionText ->
-                        val recognizedText = visionText.text
-                        // Pass the detected text back to the ViewModel's handler
-                        onLiveTextDetected(recognizedText)
-                    }
-                    .addOnFailureListener { e ->
-                        Log.e("TextRecognitionViewModel", "Live text recognition failed: ${e.message}", e)
-                        // Optionally, emit a toast for persistent errors, but usually not for live analysis
-                    }
-                    .addOnCompleteListener {
-                        imageProxy.close() // Important to close the image proxy
-                    }
-            } else {
-                imageProxy.close() // Always close the image proxy
-            }
-        }
-    }
-
-    private suspend fun analyzeImageForText(
-        context: Context,
-        imageUri: Uri,
-        onResult: (RecognizedText?) -> Unit
-    ) {
-        withContext(Dispatchers.IO) {
-            try {
-                val bitmap: Bitmap? = try {
-                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
-                        val source = ImageDecoder.createSource(context.contentResolver, imageUri)
-                        ImageDecoder.decodeBitmap(source)
-                    } else {
-                        @Suppress("DEPRECATION")
-                        MediaStore.Images.Media.getBitmap(context.contentResolver, imageUri)
-                    }
-                } catch (e: Exception) {
-                    Log.e("TextRecognizer", "Error decoding image URI: ${e.message}", e)
-                    null
-                }
-
-                if (bitmap != null) {
-                    val image = InputImage.fromBitmap(bitmap, 0)
-
-                    textRecognizer.process(image)
-                        .addOnSuccessListener { visionText ->
-                            val recognizedText = visionText.text
-                            if (recognizedText.isNotEmpty()) {
-                                onResult(RecognizedText(recognizedText, imageUri))
-                            } else {
-                                onResult(null)
-                            }
-                        }
-                        .addOnFailureListener { e ->
-                            Log.e("TextRecognizer", "Image text recognition failed: ${e.message}", e)
-                            viewModelScope.launch {
-                                _toastMessage.emit("Error analyzing image: ${e.message}")
-                            }
-                            onResult(null)
-                        }
-                } else {
-                    viewModelScope.launch {
-                        _toastMessage.emit("Failed to decode image from gallery.")
-                    }
-                    onResult(null)
-                }
-            } catch (e: Exception) {
-                Log.e("TextRecognizer", "Unexpected error during image analysis: ${e.message}", e)
-                viewModelScope.launch {
-                    _toastMessage.emit("Unexpected error: ${e.message}")
-                }
-                onResult(null)
-            }
-        }
-    }
-
-    override fun onCleared() {
-        super.onCleared()
-        // Release the ML Kit Text Recognizer when the ViewModel is cleared
-        textRecognizer.close()
+    fun resetUiState() {
+        _uiState.value = UiState.Idle
     }
 }

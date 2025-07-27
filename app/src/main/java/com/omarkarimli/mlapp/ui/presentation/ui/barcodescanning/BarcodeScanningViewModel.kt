@@ -60,7 +60,7 @@ class BarcodeScanningViewModel @Inject constructor(
         // Launch a coroutine in the viewModelScope to perform asynchronous barcode scanning.
         viewModelScope.launch {
             // Call the repository to scan the live barcode.
-            val result = barcodeRepository.scanLiveBarcode(imageProxy)
+            val result = barcodeRepository.scanLive(imageProxy)
             result.onSuccess { barcodes ->
                 // Convert ML Kit Barcode objects to custom ScannedBarcode domain models.
                 val newScannedBarcodes = barcodes.map { barcode ->
@@ -82,7 +82,7 @@ class BarcodeScanningViewModel @Inject constructor(
         // Launch a coroutine in the viewModelScope for asynchronous static image scanning.
         viewModelScope.launch {
             // Call the repository to scan the static image.
-            val result = barcodeRepository.scanStaticImageForBarcodes(inputImage)
+            val result = barcodeRepository.scanStaticImage(inputImage)
             result.onSuccess { barcodes ->
                 // Convert ML Kit Barcode objects to custom ScannedBarcode domain models,
                 // including the imageUri for static scans.

@@ -1,4 +1,4 @@
-package com.omarkarimli.mlapp.ui.presentation.ui.barcodescanning
+package com.omarkarimli.mlapp.ui.presentation.ui.components
 
 import android.util.Log
 import androidx.camera.core.CameraSelector
@@ -17,7 +17,7 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
 import java.util.concurrent.Executors
 
 @Composable
-fun BarcodeCameraPreview(modifier: Modifier = Modifier, cameraSelector: CameraSelector, analyzeLiveBarcode: (ImageProxy) -> Unit) {
+fun CameraPreview(modifier: Modifier = Modifier, cameraSelector: CameraSelector, analyzeLive: (ImageProxy) -> Unit) {
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
     val cameraExecutor = remember { Executors.newSingleThreadExecutor() }
@@ -35,7 +35,7 @@ fun BarcodeCameraPreview(modifier: Modifier = Modifier, cameraSelector: CameraSe
                 .build()
                 .also {
                     it.setAnalyzer(cameraExecutor) { imageProxy ->
-                        analyzeLiveBarcode(imageProxy)
+                        analyzeLive(imageProxy)
                     }
                 }
             try {

@@ -5,6 +5,6 @@ import com.google.mlkit.vision.barcode.common.Barcode
 import com.google.mlkit.vision.common.InputImage
 
 interface BarcodeScanningRepository {
-    suspend fun scanLiveBarcode(imageProxy: ImageProxy): Result<List<Barcode>>
-    suspend fun scanStaticImageForBarcodes(inputImage: InputImage): Result<List<Barcode>>
+    suspend fun scanLive(imageProxy: ImageProxy): Result<List<Barcode>>
+    suspend fun scanStaticImage(inputImage: InputImage): Result<List<Barcode>>
 }

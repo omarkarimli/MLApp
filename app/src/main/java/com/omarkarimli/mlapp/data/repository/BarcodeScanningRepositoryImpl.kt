@@ -15,7 +15,7 @@ class BarcodeScanningRepositoryImpl @Inject constructor(
     private val scanner: BarcodeScanner,
 ) : BarcodeScanningRepository {
 
-    override suspend fun scanLiveBarcode(imageProxy: ImageProxy): Result<List<Barcode>> {
+    override suspend fun scanLive(imageProxy: ImageProxy): Result<List<Barcode>> {
         val mediaImage = imageProxy.image ?: run {
             imageProxy.close()
             return Result.failure(IllegalStateException("Media image is null"))
@@ -32,7 +32,7 @@ class BarcodeScanningRepositoryImpl @Inject constructor(
         }
     }
 
-    override suspend fun scanStaticImageForBarcodes(inputImage: InputImage): Result<List<Barcode>> {
+    override suspend fun scanStaticImage(inputImage: InputImage): Result<List<Barcode>> {
         return try {
             val barcodes = scanner.process(inputImage).await() // Use .await() here
 
