@@ -2,10 +2,12 @@ package com.omarkarimli.mlapp.di
 
 import com.omarkarimli.mlapp.data.repository.BarcodeScanningRepositoryImpl
 import com.omarkarimli.mlapp.data.repository.ImageLabelingRepositoryImpl
+import com.omarkarimli.mlapp.data.repository.ObjectDetectionRepositoryImpl
 import com.omarkarimli.mlapp.data.repository.PermissionRepositoryImpl
 import com.omarkarimli.mlapp.data.repository.TextRecognitionRepositoryImpl
 import com.omarkarimli.mlapp.domain.repository.BarcodeScanningRepository
 import com.omarkarimli.mlapp.domain.repository.ImageLabelingRepository
+import com.omarkarimli.mlapp.domain.repository.ObjectDetectionRepository
 import com.omarkarimli.mlapp.domain.repository.PermissionRepository
 import com.omarkarimli.mlapp.domain.repository.TextRecognitionRepository
 import dagger.Binds
@@ -41,4 +43,10 @@ abstract class RepositoryModule {
     abstract fun bindImageLabelingRepository(
         imageLabelingRepositoryImpl: ImageLabelingRepositoryImpl
     ): ImageLabelingRepository
+
+    @Binds
+    @Singleton
+    abstract fun bindObjectDetectionRepository(
+        objectDetectionRepositoryImpl: ObjectDetectionRepositoryImpl
+    ): ObjectDetectionRepository
 }

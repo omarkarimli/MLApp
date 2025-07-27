@@ -7,6 +7,8 @@ import androidx.camera.core.ImageProxy
 import androidx.camera.core.Preview
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.camera.view.PreviewView
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.remember
@@ -17,34 +19,40 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
 import java.util.concurrent.Executors
 
 @Composable
-fun CameraPreview(modifier: Modifier = Modifier, cameraSelector: CameraSelector, analyzeLive: (ImageProxy) -> Unit) {
+fun CameraPreview(modifier: Modifier = Modifier, cameraSelector: CameraSelector, analyzeLive: (ImageProxy) -> Unit, graphicOverlay: @Composable () -> Unit = {}) {
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
     val cameraExecutor = remember { Executors.newSingleThreadExecutor() }
     val cameraProviderFuture = remember { ProcessCameraProvider.getInstance(context) }
 
-    AndroidView(
-        modifier = modifier,
-        factory = { ctx -> PreviewView(ctx).apply { scaleType = PreviewView.ScaleType.FIT_START } },
-        update = { previewView ->
-            val cameraProvider = cameraProviderFuture.get()
-            cameraProvider.unbindAll()
-            val preview = Preview.Builder().build().also { it.surfaceProvider = previewView.surfaceProvider }
-            val imageAnalyzer = ImageAnalysis.Builder()
-                .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
-                .build()
-                .also {
-                    it.setAnalyzer(cameraExecutor) { imageProxy ->
-                        analyzeLive(imageProxy)
+    Box(
+        modifier = Modifier.fillMaxSize()
+    ) {
+        AndroidView(
+            modifier = modifier,
+            factory = { ctx -> PreviewView(ctx).apply { scaleType = PreviewView.ScaleType.FIT_START } },
+            update = { previewView ->
+                val cameraProvider = cameraProviderFuture.get()
+                cameraProvider.unbindAll()
+                val preview = Preview.Builder().build().also { it.surfaceProvider = previewView.surfaceProvider }
+                val imageAnalyzer = ImageAnalysis.Builder()
+                    .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
+                    .build()
+                    .also {
+                        it.setAnalyzer(cameraExecutor) { imageProxy ->
+                            analyzeLive(imageProxy)
+                        }
                     }
+                try {
+                    cameraProvider.bindToLifecycle(lifecycleOwner, cameraSelector, preview, imageAnalyzer)
+                } catch (exc: Exception) {
+                    Log.e("BarcodeScanner", "Use case binding failed", exc)
                 }
-            try {
-                cameraProvider.bindToLifecycle(lifecycleOwner, cameraSelector, preview, imageAnalyzer)
-            } catch (exc: Exception) {
-                Log.e("BarcodeScanner", "Use case binding failed", exc)
             }
-        }
-    )
+        )
+
+        graphicOverlay()
+    }
 
     DisposableEffect(Unit) { onDispose { cameraExecutor.shutdown() } }
 }
