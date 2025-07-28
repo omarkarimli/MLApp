@@ -75,7 +75,7 @@ class ObjectDetectionViewModel @Inject constructor(
                 val previousStaticObjects = _objectResults.value.filter { it.imageUri != null }
                 _objectResults.value = (previousStaticObjects + detectedObjects.map { detectedObject ->
                     ScannedObject(detectedObject = detectedObject, imageUri = null)
-                }).distinctBy { it.detectedObject.trackingId }
+                }).distinctBy { it.detectedObject }
 
                 _imageSize.value = Size(imageProxy.width, imageProxy.height)
             }.onFailure { e ->

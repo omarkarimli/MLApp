@@ -147,19 +147,6 @@ fun TextRecognitionScreen(navController: NavHostController) {
         }
     }
 
-    // React to changes in recognizedTextResult for expanding the bottom sheet
-    val hasRecognizedText by remember(textResults) {
-        derivedStateOf { textResults.isNotEmpty() }
-    }
-
-    LaunchedEffect(hasRecognizedText) {
-        if (hasRecognizedText && sheetScaffoldState.bottomSheetState.currentValue == SheetValue.PartiallyExpanded) {
-            coroutineScope.launch {
-                sheetScaffoldState.bottomSheetState.expand()
-            }
-        }
-    }
-
     Scaffold(
         topBar = {
             TopAppBar(

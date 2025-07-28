@@ -145,18 +145,6 @@ fun ImageLabelingScreen(navController: NavHostController) {
         }
     }
 
-    val labelingResultCount by remember(labelingResults) {
-        derivedStateOf { labelingResults.size }
-    }
-
-    LaunchedEffect(labelingResultCount) {
-        if (labelingResultCount > 0 && sheetScaffoldState.bottomSheetState.currentValue == SheetValue.PartiallyExpanded) {
-            coroutineScope.launch {
-                sheetScaffoldState.bottomSheetState.expand()
-            }
-        }
-    }
-
     Scaffold(
         topBar = {
             TopAppBar(

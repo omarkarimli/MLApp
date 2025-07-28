@@ -65,6 +65,17 @@ fun FaceMeshDetectionScreen(navController: NavHostController) {
     // State for the GraphicOverlay
     val graphicOverlay = remember { GraphicOverlayFaceMesh(context) }
 
+
+    // Observe camera active state
+    val isCameraActive by viewModel.isCameraActive.collectAsState()
+
+    val hasCameraPermission by viewModel.hasCameraPermission.collectAsState()
+    val hasStoragePermission by viewModel.hasStoragePermission.collectAsState()
+
+    val sheetScaffoldState = rememberBottomSheetScaffoldState(
+        bottomSheetState = rememberStandardBottomSheetState(SheetValue.PartiallyExpanded, skipHiddenState = true)
+    )
+
     LaunchedEffect(faceMeshResults, imageSize, cameraSelector) {
         graphicOverlay.clear()
         graphicOverlay.setImageSourceInfo(imageSize.width, imageSize.height)
@@ -76,16 +87,6 @@ fun FaceMeshDetectionScreen(navController: NavHostController) {
         }
         graphicOverlay.postInvalidate() // Request redraw for the overlay
     }
-
-    // Observe camera active state
-    val isCameraActive by viewModel.isCameraActive.collectAsState()
-
-    val hasCameraPermission by viewModel.hasCameraPermission.collectAsState()
-    val hasStoragePermission by viewModel.hasStoragePermission.collectAsState()
-
-    val sheetScaffoldState = rememberBottomSheetScaffoldState(
-        bottomSheetState = rememberStandardBottomSheetState(SheetValue.PartiallyExpanded, skipHiddenState = true)
-    )
 
     val cameraPermissionLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestPermission()

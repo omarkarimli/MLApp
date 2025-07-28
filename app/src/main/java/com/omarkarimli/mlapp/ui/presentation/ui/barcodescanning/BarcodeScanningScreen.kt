@@ -144,17 +144,6 @@ fun BarcodeScanningScreen(navController: NavHostController) {
         }
     }
 
-    val barcodeResultCount by remember(barcodeResults) {
-        derivedStateOf { barcodeResults.size }
-    }
-    LaunchedEffect(barcodeResultCount) {
-        if (barcodeResultCount > 0 && sheetScaffoldState.bottomSheetState.currentValue == SheetValue.PartiallyExpanded) {
-            coroutineScope.launch {
-                sheetScaffoldState.bottomSheetState.expand()
-            }
-        }
-    }
-
     Scaffold(
         topBar = {
             TopAppBar(
