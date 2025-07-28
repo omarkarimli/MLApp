@@ -5,7 +5,6 @@ import android.graphics.ImageDecoder
 import android.os.Build
 import android.provider.MediaStore
 import android.util.Log
-import android.util.Size
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
@@ -13,6 +12,8 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Pause
+import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.rounded.Done
 import androidx.compose.material.icons.rounded.Photo
 import androidx.compose.material3.*
@@ -32,7 +33,6 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import androidx.hilt.navigation.compose.hiltViewModel
-import com.google.mlkit.vision.objects.DetectedObject
 import com.omarkarimli.mlapp.domain.models.toResultCards
 import com.omarkarimli.mlapp.ui.presentation.ui.common.BottomSheetContent
 import com.omarkarimli.mlapp.ui.presentation.ui.common.CameraPreview
@@ -58,8 +58,11 @@ fun ObjectDetectionScreen(navController: NavHostController) {
     val uiState by viewModel.uiState.collectAsState()
     val cameraSelector by viewModel.cameraSelector.collectAsState()
 
-    var imageSize by remember { mutableStateOf(Size(1,1)) }
+    val imageSize by viewModel.imageSize.collectAsState()
     val objectResults by viewModel.objectResults.collectAsState()
+
+    // Observe camera active state
+    val isCameraActive by viewModel.isCameraActive.collectAsState()
 
     val hasCameraPermission by viewModel.hasCameraPermission.collectAsState()
     val hasStoragePermission by viewModel.hasStoragePermission.collectAsState()
@@ -148,7 +151,7 @@ fun ObjectDetectionScreen(navController: NavHostController) {
         topBar = {
             TopAppBar(
                 title = {
-                    Text(Screen.BarcodeScanning.title, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    Text(Screen.ObjectDetection.title, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 },
                 navigationIcon = {
                     IconButton(onClick = { navController.navigateUp() }) {
@@ -156,8 +159,29 @@ fun ObjectDetectionScreen(navController: NavHostController) {
                     }
                 },
                 actions = {
+                    // Camera Play/Pause Button
                     FilledIconButton(
                         onClick = {
+                            viewModel.toggleCameraActive()
+                        },
+                        modifier = Modifier.size(Dimens.IconSizeLarge),
+                        shape = IconButtonDefaults.filledShape,
+                        colors = IconButtonDefaults.filledIconButtonColors(
+                            containerColor = MaterialTheme.colorScheme.surfaceContainer,
+                            contentColor = MaterialTheme.colorScheme.onSurface
+                        )
+                    ) {
+                        if (isCameraActive) {
+                            Icon(Icons.Filled.Pause, modifier = Modifier.size(Dimens.IconSizeSmall), contentDescription = "Pause Camera")
+                        } else {
+                            Icon(Icons.Filled.PlayArrow, modifier = Modifier.size(Dimens.IconSizeSmall), contentDescription = "Play Camera")
+                        }
+                    }
+                    Spacer(Modifier.size(Dimens.SpacerSmall))
+                    FilledIconButton(
+                        onClick = {
+                            if (isCameraActive) viewModel.toggleCameraActive()
+
                             if (hasStoragePermission) {
                                 coroutineScope.launch { sheetScaffoldState.bottomSheetState.partialExpand() }
                                 pickImageLauncher.launch("image/*")
@@ -199,9 +223,11 @@ fun ObjectDetectionScreen(navController: NavHostController) {
                 sheetShape = RoundedCornerShape(topStart = Dimens.CornerRadiusLarge, topEnd = Dimens.CornerRadiusLarge),
                 sheetDragHandle = { BottomSheetDefaults.DragHandle() },
                 sheetContent = {
-                    BottomSheetContent(objectResults.toResultCards(), onFlipCamera = {
-                        viewModel.onFlipCamera()
-                    })
+                    BottomSheetContent(
+                        objectResults.toResultCards(),
+                        onFlipCamera = { viewModel.onFlipCamera() },
+                        isCameraActive = isCameraActive
+                    )
                 },
                 content = {
                     Column(
@@ -209,34 +235,32 @@ fun ObjectDetectionScreen(navController: NavHostController) {
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
                         if (hasCameraPermission) {
-                            // map objectResults to detectedObjects
-                            val detectedObjects: List<DetectedObject> = objectResults.map { scannedObject ->
-                                scannedObject.detectedObject
+                            if (isCameraActive) {
+                                CameraPreview(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .weight(1f)
+                                        .background(
+                                            Color.Black,
+                                            RoundedCornerShape(Dimens.CornerRadiusMedium)
+                                        ),
+                                    cameraSelector = cameraSelector,
+                                    analyzeLive = { imageProxy ->
+                                        viewModel.analyzeLiveObject(
+                                            imageProxy
+                                        )
+                                    },
+                                    graphicOverlay = {
+                                        GraphicOverlayObject(
+                                            objectResults = objectResults,
+                                            imageSize = imageSize,
+                                            modifier = Modifier.fillMaxSize()
+                                        )
+                                    }
+                                )
+                            } else {
+                                Text("Camera has been paused", modifier = Modifier.padding(Dimens.PaddingMedium))
                             }
-
-                            CameraPreview(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .weight(1f)
-                                    .background(
-                                        Color.Black,
-                                        RoundedCornerShape(Dimens.CornerRadiusMedium)
-                                    ),
-                                cameraSelector = cameraSelector,
-                                analyzeLive = { imageProxy ->
-                                    imageSize = Size(imageProxy.width, imageProxy.height)
-                                    viewModel.analyzeLiveObject(
-                                        imageProxy
-                                    )
-                                },
-                                graphicOverlay = {
-                                    GraphicOverlayObject(
-                                        detectedObjects = detectedObjects,
-                                        imageSize = imageSize,
-                                        modifier = Modifier.fillMaxSize()
-                                    )
-                                }
-                            )
                         } else {
                             CameraPermissionPlaceholder(
                                 modifier = Modifier

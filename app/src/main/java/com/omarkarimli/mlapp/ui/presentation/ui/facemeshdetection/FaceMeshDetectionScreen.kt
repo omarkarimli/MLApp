@@ -13,6 +13,8 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Pause
+import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.rounded.Done
 import androidx.compose.material.icons.rounded.Photo
 import androidx.compose.material3.*
@@ -64,16 +66,20 @@ fun FaceMeshDetectionScreen(navController: NavHostController) {
     // State for the GraphicOverlay
     val graphicOverlay = remember { GraphicOverlayFaceMesh(context) }
 
-    // Update GraphicOverlay when detectedFaceMeshes or imageSize changes
     LaunchedEffect(faceMeshResults, imageSize, cameraSelector) {
         graphicOverlay.clear()
         graphicOverlay.setImageSourceInfo(imageSize.width, imageSize.height)
         faceMeshResults.forEach { scannedFaceMesh ->
             // Pass true for front camera, false for back camera
-            graphicOverlay.add(FaceMeshGraphic(graphicOverlay, scannedFaceMesh.faceMesh, cameraSelector == CameraSelector.DEFAULT_FRONT_CAMERA))
+            if (scannedFaceMesh.imageUri == null) {
+                graphicOverlay.add(FaceMeshGraphic(graphicOverlay, scannedFaceMesh.faceMesh, cameraSelector == CameraSelector.DEFAULT_FRONT_CAMERA))
+            }
         }
         graphicOverlay.postInvalidate() // Request redraw for the overlay
     }
+
+    // Observe camera active state
+    val isCameraActive by viewModel.isCameraActive.collectAsState()
 
     val hasCameraPermission by viewModel.hasCameraPermission.collectAsState()
     val hasStoragePermission by viewModel.hasStoragePermission.collectAsState()
@@ -170,8 +176,29 @@ fun FaceMeshDetectionScreen(navController: NavHostController) {
                     }
                 },
                 actions = {
+                    // Camera Play/Pause Button
                     FilledIconButton(
                         onClick = {
+                            viewModel.toggleCameraActive()
+                        },
+                        modifier = Modifier.size(Dimens.IconSizeLarge),
+                        shape = IconButtonDefaults.filledShape,
+                        colors = IconButtonDefaults.filledIconButtonColors(
+                            containerColor = MaterialTheme.colorScheme.surfaceContainer,
+                            contentColor = MaterialTheme.colorScheme.onSurface
+                        )
+                    ) {
+                        if (isCameraActive) {
+                            Icon(Icons.Filled.Pause, modifier = Modifier.size(Dimens.IconSizeSmall), contentDescription = "Pause Camera")
+                        } else {
+                            Icon(Icons.Filled.PlayArrow, modifier = Modifier.size(Dimens.IconSizeSmall), contentDescription = "Play Camera")
+                        }
+                    }
+                    Spacer(Modifier.size(Dimens.SpacerSmall))
+                    FilledIconButton(
+                        onClick = {
+                            if (isCameraActive) viewModel.toggleCameraActive()
+
                             if (hasStoragePermission) {
                                 coroutineScope.launch { sheetScaffoldState.bottomSheetState.partialExpand() }
                                 pickImageLauncher.launch("image/*")
@@ -215,9 +242,11 @@ fun FaceMeshDetectionScreen(navController: NavHostController) {
                 sheetShape = RoundedCornerShape(topStart = Dimens.CornerRadiusLarge, topEnd = Dimens.CornerRadiusLarge),
                 sheetDragHandle = { BottomSheetDefaults.DragHandle() },
                 sheetContent = {
-                    BottomSheetContent(faceMeshResults.toResultCards(), onFlipCamera = {
-                        viewModel.onFlipCamera()
-                    })
+                    BottomSheetContent(
+                        faceMeshResults.toResultCards(),
+                        onFlipCamera = { viewModel.onFlipCamera() },
+                        isCameraActive = isCameraActive
+                    )
                 },
                 content = {
                     Column(
@@ -225,27 +254,31 @@ fun FaceMeshDetectionScreen(navController: NavHostController) {
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
                         if (hasCameraPermission) {
-                            CameraPreview(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .weight(1f)
-                                    .background(
-                                        Color.Black,
-                                        RoundedCornerShape(Dimens.CornerRadiusMedium)
-                                    ),
-                                cameraSelector = cameraSelector,
-                                analyzeLive = { imageProxy ->
-                                    viewModel.analyzeLiveFaceMesh(
-                                        imageProxy
-                                    )
-                                },
-                                graphicOverlay = {
-                                    AndroidView(
-                                        factory = { graphicOverlay },
-                                        modifier = Modifier.fillMaxSize()
-                                    )
-                                }
-                            )
+                            if (isCameraActive) {
+                                CameraPreview(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .weight(1f)
+                                        .background(
+                                            Color.Black,
+                                            RoundedCornerShape(Dimens.CornerRadiusMedium)
+                                        ),
+                                    cameraSelector = cameraSelector,
+                                    analyzeLive = { imageProxy ->
+                                        viewModel.analyzeLiveFaceMesh(
+                                            imageProxy
+                                        )
+                                    },
+                                    graphicOverlay = {
+                                        AndroidView(
+                                            factory = { graphicOverlay },
+                                            modifier = Modifier.fillMaxSize()
+                                        )
+                                    }
+                                )
+                            } else {
+                                Text("Camera has been paused", modifier = Modifier.padding(Dimens.PaddingMedium))
+                            }
                         } else {
                             CameraPermissionPlaceholder(
                                 modifier = Modifier

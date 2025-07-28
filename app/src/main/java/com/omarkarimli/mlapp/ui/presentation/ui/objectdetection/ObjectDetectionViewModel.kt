@@ -2,6 +2,7 @@ package com.omarkarimli.mlapp.ui.presentation.ui.objectdetection
 
 import android.Manifest
 import android.net.Uri
+import android.util.Size
 import androidx.camera.core.ImageProxy
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -34,6 +35,12 @@ class ObjectDetectionViewModel @Inject constructor(
     // Exposed StateFlow for observing scanned barcode results.
     val objectResults: StateFlow<List<ScannedObject>> = _objectResults.asStateFlow()
 
+    private val _imageSize = MutableStateFlow(Size(1,1))
+    val imageSize: StateFlow<Size> = _imageSize.asStateFlow()
+
+    private val _isCameraActive = MutableStateFlow(false)
+    val isCameraActive: StateFlow<Boolean> = _isCameraActive.asStateFlow()
+
     // MutableStateFlow to control the active camera (front or back).
     private val _cameraSelector = MutableStateFlow(androidx.camera.core.CameraSelector.DEFAULT_BACK_CAMERA)
     // Exposed StateFlow for observing camera selection changes.
@@ -46,6 +53,10 @@ class ObjectDetectionViewModel @Inject constructor(
     init {
         permissionRepository.notifyPermissionChanged(Manifest.permission.CAMERA)
         permissionRepository.notifyPermissionChanged(permissionRepository.getStoragePermission())
+
+        if (hasCameraPermission.value) {
+            toggleCameraActive()
+        }
     }
 
     fun analyzeLiveObject(imageProxy: ImageProxy) {
@@ -65,6 +76,8 @@ class ObjectDetectionViewModel @Inject constructor(
                 _objectResults.value = (previousStaticObjects + detectedObjects.map { detectedObject ->
                     ScannedObject(detectedObject = detectedObject, imageUri = null)
                 }).distinctBy { it.detectedObject.trackingId }
+
+                _imageSize.value = Size(imageProxy.width, imageProxy.height)
             }.onFailure { e ->
                 // If scanning fails, update the UI state to an error state.
                 _uiState.value = UiState.Error("Live scanning failed: ${e.message}")
@@ -97,6 +110,18 @@ class ObjectDetectionViewModel @Inject constructor(
             androidx.camera.core.CameraSelector.DEFAULT_FRONT_CAMERA
         } else {
             androidx.camera.core.CameraSelector.DEFAULT_BACK_CAMERA
+        }
+    }
+
+    fun toggleCameraActive() {
+        if (hasCameraPermission.value) {
+            _isCameraActive.value = !_isCameraActive.value
+            // Clear live analysis results when pausing, keep static ones
+            if (!_isCameraActive.value) {
+                _objectResults.value = _objectResults.value.filter { it.imageUri != null }
+            }
+        } else {
+            _uiState.value = UiState.Error("Camera permission is required to toggle camera active state.")
         }
     }
 

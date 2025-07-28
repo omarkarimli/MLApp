@@ -12,6 +12,8 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Pause
+import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.rounded.Done
 import androidx.compose.material.icons.rounded.Photo
 import androidx.compose.material3.*
@@ -57,6 +59,9 @@ fun TextRecognitionScreen(navController: NavHostController) {
     val uiState by viewModel.uiState.collectAsState()
     // Observe recognized text result
     val textResults by viewModel.textResults.collectAsState()
+
+    // Observe camera active state
+    val isCameraActive by viewModel.isCameraActive.collectAsState()
     val cameraSelector by viewModel.cameraSelector.collectAsState()
 
     val hasCameraPermission by viewModel.hasCameraPermission.collectAsState()
@@ -169,6 +174,25 @@ fun TextRecognitionScreen(navController: NavHostController) {
                     }
                 },
                 actions = {
+                    // Camera Play/Pause Button
+                    FilledIconButton(
+                        onClick = {
+                            viewModel.toggleCameraActive()
+                        },
+                        modifier = Modifier.size(Dimens.IconSizeLarge),
+                        shape = IconButtonDefaults.filledShape,
+                        colors = IconButtonDefaults.filledIconButtonColors(
+                            containerColor = MaterialTheme.colorScheme.surfaceContainer,
+                            contentColor = MaterialTheme.colorScheme.onSurface
+                        )
+                    ) {
+                        if (isCameraActive) {
+                            Icon(Icons.Filled.Pause, modifier = Modifier.size(Dimens.IconSizeSmall), contentDescription = "Pause Camera")
+                        } else {
+                            Icon(Icons.Filled.PlayArrow, modifier = Modifier.size(Dimens.IconSizeSmall), contentDescription = "Play Camera")
+                        }
+                    }
+                    Spacer(Modifier.size(Dimens.SpacerSmall))
                     FilledIconButton(
                         onClick = {
                             if (hasStoragePermission) {
@@ -213,9 +237,11 @@ fun TextRecognitionScreen(navController: NavHostController) {
                 sheetDragHandle = { BottomSheetDefaults.DragHandle() },
                 sheetContent = {
                     // Pass the recognized text converted to ResultCard list
-                    BottomSheetContent(textResults.toResultCards(), onFlipCamera = {
-                        viewModel.onFlipCamera()
-                    })
+                    BottomSheetContent(
+                        textResults.toResultCards(),
+                        onFlipCamera = { viewModel.onFlipCamera() },
+                        isCameraActive = isCameraActive
+                    )
                 },
                 content = {
                     Column(
@@ -223,22 +249,26 @@ fun TextRecognitionScreen(navController: NavHostController) {
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
                         if (hasCameraPermission) {
-                            CameraPreview(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .weight(1f)
-                                    .background(
-                                        Color.Black,
-                                        RoundedCornerShape(Dimens.CornerRadiusMedium)
-                                    ),
-                                cameraSelector = cameraSelector,
-                                analyzeLive = { imageProxy ->
-                                    // Call analyzeLiveText
-                                    viewModel.analyzeLiveText(
-                                        imageProxy
-                                    )
-                                }
-                            )
+                            if (isCameraActive) {
+                                CameraPreview(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .weight(1f)
+                                        .background(
+                                            Color.Black,
+                                            RoundedCornerShape(Dimens.CornerRadiusMedium)
+                                        ),
+                                    cameraSelector = cameraSelector,
+                                    analyzeLive = { imageProxy ->
+                                        // Call analyzeLiveText
+                                        viewModel.analyzeLiveText(
+                                            imageProxy
+                                        )
+                                    }
+                                )
+                            } else {
+                                Text("Camera has been paused", modifier = Modifier.padding(Dimens.PaddingMedium))
+                            }
                         } else {
                             CameraPermissionPlaceholder(
                                 modifier = Modifier

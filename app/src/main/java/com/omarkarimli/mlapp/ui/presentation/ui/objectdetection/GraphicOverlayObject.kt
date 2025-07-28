@@ -10,14 +10,17 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.nativeCanvas
-import com.google.mlkit.vision.objects.DetectedObject
+import com.omarkarimli.mlapp.domain.models.ScannedObject
 import com.omarkarimli.mlapp.utils.Constants
 import com.omarkarimli.mlapp.utils.Dimens
 import kotlin.collections.forEach
 import kotlin.math.min
 
 @Composable
-fun GraphicOverlayObject(detectedObjects: List<DetectedObject>, imageSize: Size, modifier: Modifier = Modifier) {
+fun GraphicOverlayObject(objectResults: List<ScannedObject>, imageSize: Size, modifier: Modifier = Modifier) {
+    // Only Live
+    val filteredObjectResults = objectResults.filter { it.imageUri == null }
+
     Canvas(modifier = modifier.fillMaxSize()) {
         if (imageSize.width <= 0 || imageSize.height <= 0) return@Canvas
 
@@ -29,7 +32,8 @@ fun GraphicOverlayObject(detectedObjects: List<DetectedObject>, imageSize: Size,
         val offsetX = (size.width - imageSize.width * scaleFactor) / 2
         val offsetY = (size.height - imageSize.height * scaleFactor) / 2
 
-        detectedObjects.forEach { detectedObject ->
+        filteredObjectResults.forEach { objectResult ->
+            val detectedObject = objectResult.detectedObject
             val boundingBox = detectedObject.boundingBox
 
             val left = boundingBox.left * scaleFactor + offsetX

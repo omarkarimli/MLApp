@@ -34,7 +34,9 @@ class ImageLabelingViewModel @Inject constructor(
     private val _labelingResults = MutableStateFlow<List<ImageLabelResult>>(emptyList())
     val labelingResults: StateFlow<List<ImageLabelResult>> = _labelingResults.asStateFlow()
 
-    // MutableStateFlow to control the active camera (front or back).
+    private val _isCameraActive = MutableStateFlow(false)
+    val isCameraActive: StateFlow<Boolean> = _isCameraActive.asStateFlow()
+
     private val _cameraSelector = MutableStateFlow(CameraSelector.DEFAULT_BACK_CAMERA)
     // Exposed StateFlow for observing camera selection changes.
     val cameraSelector: StateFlow<CameraSelector> = _cameraSelector.asStateFlow()
@@ -46,6 +48,10 @@ class ImageLabelingViewModel @Inject constructor(
     init {
         permissionRepository.notifyPermissionChanged(Manifest.permission.CAMERA)
         permissionRepository.notifyPermissionChanged(permissionRepository.getStoragePermission())
+
+        if (hasCameraPermission.value) {
+            toggleCameraActive()
+        }
     }
 
     fun analyzeLiveLabel(imageProxy: ImageProxy) {
@@ -105,6 +111,18 @@ class ImageLabelingViewModel @Inject constructor(
             CameraSelector.DEFAULT_FRONT_CAMERA
         } else {
             CameraSelector.DEFAULT_BACK_CAMERA
+        }
+    }
+
+    fun toggleCameraActive() {
+        if (hasCameraPermission.value) {
+            _isCameraActive.value = !_isCameraActive.value
+            // Clear live analysis results when pausing, keep static ones
+            if (!_isCameraActive.value) {
+                _labelingResults.value = _labelingResults.value.filter { it.imageUri != null }
+            }
+        } else {
+            _uiState.value = UiState.Error("Camera permission is required to toggle camera active state.")
         }
     }
 

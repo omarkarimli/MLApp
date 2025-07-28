@@ -35,7 +35,9 @@ class BarcodeScanningViewModel @Inject constructor(
     // Exposed StateFlow for observing scanned barcode results.
     val barcodeResults: StateFlow<List<ScannedBarcode>> = _barcodeResults.asStateFlow()
 
-    // MutableStateFlow to control the active camera (front or back).
+    private val _isCameraActive = MutableStateFlow(false)
+    val isCameraActive: StateFlow<Boolean> = _isCameraActive.asStateFlow()
+
     private val _cameraSelector = MutableStateFlow(androidx.camera.core.CameraSelector.DEFAULT_BACK_CAMERA)
     // Exposed StateFlow for observing camera selection changes.
     val cameraSelector: StateFlow<androidx.camera.core.CameraSelector> = _cameraSelector.asStateFlow()
@@ -47,6 +49,10 @@ class BarcodeScanningViewModel @Inject constructor(
     init {
         permissionRepository.notifyPermissionChanged(Manifest.permission.CAMERA)
         permissionRepository.notifyPermissionChanged(permissionRepository.getStoragePermission())
+
+        if (hasCameraPermission.value) {
+            toggleCameraActive()
+        }
     }
 
     fun analyzeLiveBarcode(imageProxy: ImageProxy) {
@@ -106,6 +112,18 @@ class BarcodeScanningViewModel @Inject constructor(
             androidx.camera.core.CameraSelector.DEFAULT_FRONT_CAMERA
         } else {
             androidx.camera.core.CameraSelector.DEFAULT_BACK_CAMERA
+        }
+    }
+
+    fun toggleCameraActive() {
+        if (hasCameraPermission.value) {
+            _isCameraActive.value = !_isCameraActive.value
+            // Clear live analysis results when pausing, keep static ones
+            if (!_isCameraActive.value) {
+                _barcodeResults.value = _barcodeResults.value.filter { it.imageUri != null }
+            }
+        } else {
+            _uiState.value = UiState.Error("Camera permission is required to toggle camera active state.")
         }
     }
 

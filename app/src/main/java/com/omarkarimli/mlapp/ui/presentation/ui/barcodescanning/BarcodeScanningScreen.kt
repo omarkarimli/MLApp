@@ -12,6 +12,8 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Pause
+import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.rounded.Done
 import androidx.compose.material.icons.rounded.Photo
 import androidx.compose.material3.*
@@ -55,6 +57,9 @@ fun BarcodeScanningScreen(navController: NavHostController) {
 
     val uiState by viewModel.uiState.collectAsState()
     val barcodeResults by viewModel.barcodeResults.collectAsState()
+
+    // Observe camera active state
+    val isCameraActive by viewModel.isCameraActive.collectAsState()
     val cameraSelector by viewModel.cameraSelector.collectAsState()
 
     val hasCameraPermission by viewModel.hasCameraPermission.collectAsState()
@@ -163,6 +168,25 @@ fun BarcodeScanningScreen(navController: NavHostController) {
                     }
                 },
                 actions = {
+                    // Camera Play/Pause Button
+                    FilledIconButton(
+                        onClick = {
+                            viewModel.toggleCameraActive()
+                        },
+                        modifier = Modifier.size(Dimens.IconSizeLarge),
+                        shape = IconButtonDefaults.filledShape,
+                        colors = IconButtonDefaults.filledIconButtonColors(
+                            containerColor = MaterialTheme.colorScheme.surfaceContainer,
+                            contentColor = MaterialTheme.colorScheme.onSurface
+                        )
+                    ) {
+                        if (isCameraActive) {
+                            Icon(Icons.Filled.Pause, modifier = Modifier.size(Dimens.IconSizeSmall), contentDescription = "Pause Camera")
+                        } else {
+                            Icon(Icons.Filled.PlayArrow, modifier = Modifier.size(Dimens.IconSizeSmall), contentDescription = "Play Camera")
+                        }
+                    }
+                    Spacer(Modifier.size(Dimens.SpacerSmall))
                     FilledIconButton(
                         onClick = {
                             if (hasStoragePermission) {
@@ -206,9 +230,11 @@ fun BarcodeScanningScreen(navController: NavHostController) {
                 sheetShape = RoundedCornerShape(topStart = Dimens.CornerRadiusLarge, topEnd = Dimens.CornerRadiusLarge),
                 sheetDragHandle = { BottomSheetDefaults.DragHandle() },
                 sheetContent = {
-                    BottomSheetContent(barcodeResults.toResultCards(), onFlipCamera = {
-                        viewModel.onFlipCamera()
-                    })
+                    BottomSheetContent(
+                        barcodeResults.toResultCards(),
+                        onFlipCamera = { viewModel.onFlipCamera() },
+                        isCameraActive = isCameraActive
+                    )
                 },
                 content = {
                     Column(
@@ -216,21 +242,25 @@ fun BarcodeScanningScreen(navController: NavHostController) {
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
                         if (hasCameraPermission) {
-                            CameraPreview(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .weight(1f)
-                                    .background(
-                                        Color.Black,
-                                        RoundedCornerShape(Dimens.CornerRadiusMedium)
-                                    ),
-                                cameraSelector = cameraSelector,
-                                analyzeLive = { imageProxy ->
-                                    viewModel.analyzeLiveBarcode(
-                                        imageProxy
-                                    )
-                                }
-                            )
+                            if (isCameraActive) {
+                                CameraPreview(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .weight(1f)
+                                        .background(
+                                            Color.Black,
+                                            RoundedCornerShape(Dimens.CornerRadiusMedium)
+                                        ),
+                                    cameraSelector = cameraSelector,
+                                    analyzeLive = { imageProxy ->
+                                        viewModel.analyzeLiveBarcode(
+                                            imageProxy
+                                        )
+                                    }
+                                )
+                            } else {
+                                Text("Camera has been paused", modifier = Modifier.padding(Dimens.PaddingMedium))
+                            }
                         } else {
                             CameraPermissionPlaceholder(
                                 modifier = Modifier
