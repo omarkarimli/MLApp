@@ -12,8 +12,6 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.Pause
-import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.rounded.Done
 import androidx.compose.material.icons.rounded.Photo
 import androidx.compose.material3.*
@@ -36,6 +34,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import com.omarkarimli.mlapp.domain.models.toResultCards
 import com.omarkarimli.mlapp.ui.presentation.ui.common.BottomSheetContent
 import com.omarkarimli.mlapp.ui.presentation.ui.common.CameraPreview
+import com.omarkarimli.mlapp.ui.presentation.ui.common.ToggleButton
 import com.omarkarimli.mlapp.ui.presentation.ui.common.UiState
 import com.omarkarimli.mlapp.utils.showToast
 
@@ -168,27 +167,15 @@ fun BarcodeScanningScreen(navController: NavHostController) {
                     }
                 },
                 actions = {
-                    // Camera Play/Pause Button
-                    FilledIconButton(
-                        onClick = {
-                            viewModel.toggleCameraActive()
-                        },
-                        modifier = Modifier.size(Dimens.IconSizeLarge),
-                        shape = IconButtonDefaults.filledShape,
-                        colors = IconButtonDefaults.filledIconButtonColors(
-                            containerColor = MaterialTheme.colorScheme.surfaceContainer,
-                            contentColor = MaterialTheme.colorScheme.onSurface
-                        )
-                    ) {
-                        if (isCameraActive) {
-                            Icon(Icons.Filled.Pause, modifier = Modifier.size(Dimens.IconSizeSmall), contentDescription = "Pause Camera")
-                        } else {
-                            Icon(Icons.Filled.PlayArrow, modifier = Modifier.size(Dimens.IconSizeSmall), contentDescription = "Play Camera")
-                        }
-                    }
+                    ToggleButton(
+                        isToggled = isCameraActive,
+                        onToggle = { viewModel.toggleCameraActive() }
+                    )
                     Spacer(Modifier.size(Dimens.SpacerSmall))
                     FilledIconButton(
                         onClick = {
+                            if (isCameraActive) viewModel.toggleCameraActive()
+
                             if (hasStoragePermission) {
                                 coroutineScope.launch { sheetScaffoldState.bottomSheetState.partialExpand() }
                                 pickImageLauncher.launch("image/*")
