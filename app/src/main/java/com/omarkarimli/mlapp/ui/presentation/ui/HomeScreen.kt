@@ -68,7 +68,9 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.navigation.NavHostController
 import com.omarkarimli.mlapp.R
+import com.omarkarimli.mlapp.domain.models.ListItemModel
 import com.omarkarimli.mlapp.ui.navigation.Screen
+import com.omarkarimli.mlapp.ui.presentation.ui.common.ListItemUi
 import com.omarkarimli.mlapp.ui.theme.MLAppTheme
 import com.omarkarimli.mlapp.utils.Dimens
 

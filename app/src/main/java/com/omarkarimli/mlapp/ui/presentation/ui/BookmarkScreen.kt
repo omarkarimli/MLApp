@@ -1,4 +1,4 @@
-package com.omarkarimli.mycollab.ui.presentation
+package com.omarkarimli.mlapp.ui.presentation.ui
 
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -45,7 +45,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavHostController
-import com.omarkarimli.mlapp.ui.presentation.ui.ListItemModel
+import com.omarkarimli.mlapp.domain.models.ListItemModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable

@@ -1,6 +1,5 @@
-package com.omarkarimli.mlapp.ui.presentation.ui
+package com.omarkarimli.mlapp.ui.presentation.ui.common
 
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -23,15 +22,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-
-data class ListItemModel(
-    val id: String,
-    val icon: ImageVector,
-    val title: String,
-    val description: String,
-    val endingIcon: ImageVector,
-    val onClick: () -> Unit = {} // Optional click action
-)
+import com.omarkarimli.mlapp.domain.models.ListItemModel
 
 @Composable
 fun ListItemUi(

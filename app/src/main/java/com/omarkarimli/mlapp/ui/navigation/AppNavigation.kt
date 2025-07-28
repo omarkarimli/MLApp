@@ -23,7 +23,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.omarkarimli.mlapp.ui.presentation.ui.facemeshdetection.FaceMeshDetectionScreen
-import com.omarkarimli.mycollab.ui.presentation.BookmarkScreen
+import com.omarkarimli.mlapp.ui.presentation.ui.BookmarkScreen
 import com.omarkarimli.mlapp.ui.presentation.ui.HomeScreen
 import com.omarkarimli.mlapp.ui.presentation.ui.imagelabeling.ImageLabelingScreen
 import com.omarkarimli.mlapp.ui.presentation.ui.LoginScreen
