@@ -4,6 +4,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
 object Dimens {
+    // Static Device Ratio
+    val staticDeviceRatio: Float = 1080f / 2400f
+
     // Toast
     const val toastDurationMillis = 300L
     const val textAnimationDelayMillis: Long = 600L // Delay before text starts animating
@@ -69,6 +72,6 @@ object Dimens {
 
     const val FixedFaceMeshScaleFactor = 1.25f
 
-    const val FixedFaceMeshPaddingX = 176f
-    const val FixedFaceMeshPaddingY = 476f
+    const val FixedFaceMeshPaddingX = 172f
+    const val FixedFaceMeshPaddingY = 468f
 }

@@ -5,6 +5,7 @@ import android.graphics.Canvas
 import android.util.AttributeSet
 import android.view.View
 import com.omarkarimli.mlapp.utils.Dimens
+import com.omarkarimli.mlapp.utils.getDeviceScreenRatioDp
 import kotlin.math.min
 
 class GraphicOverlayFaceMesh @JvmOverloads constructor(context: Context, attrs: AttributeSet? = null, defStyleAttr: Int = 0) : View(context, attrs, defStyleAttr) {
@@ -61,8 +62,10 @@ class GraphicOverlayFaceMesh @JvmOverloads constructor(context: Context, attrs: 
         val scaleY = overlayHeight.toFloat() / imageHeight
         scaleFactor = min(scaleX, scaleY) * Dimens.FixedFaceMeshScaleFactor
 
-        translateX = (overlayWidth - imageWidth * scaleFactor) / 2 + Dimens.FixedFaceMeshPaddingX
-        translateY = (overlayHeight - imageHeight * scaleFactor) / 2 - Dimens.FixedFaceMeshPaddingY
+        val ratioScale = context.getDeviceScreenRatioDp() / Dimens.staticDeviceRatio
+
+        translateX = (overlayWidth - imageWidth * scaleFactor) / 2 + (Dimens.FixedFaceMeshPaddingX * ratioScale)
+        translateY = (overlayHeight - imageHeight * scaleFactor) / 2 - (Dimens.FixedFaceMeshPaddingY * ratioScale)
 
         postInvalidate() // Request a redraw with new scale/translation
     }
