@@ -29,15 +29,12 @@ import com.omarkarimli.mlapp.utils.Dimens
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun BottomSheetContent(resultCards: List<ResultCardModel>, onFlipCamera: () -> Unit, onStopOrPlayCamera: () -> Unit) {
+fun BottomSheetContent(resultCards: List<ResultCardModel>, onFlipCamera: () -> Unit) {
     Column(modifier = Modifier.fillMaxWidth().padding(horizontal = Dimens.PaddingMedium), horizontalAlignment = Alignment.CenterHorizontally) {
         Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
             Text("Results", modifier = Modifier.padding(bottom = Dimens.PaddingSmall), textAlign = TextAlign.Start, style = MaterialTheme.typography.titleLarge, maxLines = 1, overflow = TextOverflow.Ellipsis)
             IconButton(onClick = onFlipCamera, modifier = Modifier.size(Dimens.IconSizeLarge)) {
                 Icon(Icons.Rounded.FlipCameraIos, contentDescription = "Flip Camera")
-            }
-            IconButton(onClick = onStopOrPlayCamera, modifier = Modifier.size(Dimens.IconSizeLarge)) {
-                Icon(Icons.Rounded.StopCircle, contentDescription = "Stop Camera")
             }
         }
         if (resultCards.isEmpty()) {
