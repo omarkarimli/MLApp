@@ -46,12 +46,14 @@ fun CameraPreview(modifier: Modifier = Modifier, cameraSelector: CameraSelector,
                 try {
                     cameraProvider.bindToLifecycle(lifecycleOwner, cameraSelector, preview, imageAnalyzer)
                 } catch (exc: Exception) {
-                    Log.e("BarcodeScanner", "Use case binding failed", exc)
+                    Log.e("CameraPreview", "Use case binding failed", exc)
                 }
             }
         )
 
-        graphicOverlay()
+        Box(modifier = Modifier.fillMaxSize()) {
+            graphicOverlay()
+        }
     }
 
     DisposableEffect(Unit) { onDispose { cameraExecutor.shutdown() } }

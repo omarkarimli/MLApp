@@ -61,35 +61,10 @@ class ObjectDetectionViewModel @Inject constructor(
             // Call the repository to scan the live barcode.
             val result = objectDetectionRepository.scanLive(imageProxy)
             result.onSuccess { detectedObjects ->
-//                // Convert ML Kit Barcode objects to custom ScannedBarcode domain models.
-//                val newDetectedObjects = detectedObjects.map { detectedObject ->
-//                    ScannedObject(detectedObject = detectedObject, imageUri = null) // imageUri is null for live scan
-//                }
-//                // Update the barcode results, ensuring no duplicates based on rawValue.
-//                val updatedList = (_objectResults.value + newDetectedObjects).distinctBy { it.detectedObject.trackingId }
-//                _objectResults.value = updatedList
-
-
-                val currentObjects = _objectResults.value.toMutableList()
-                val updatedObjects = mutableListOf<ScannedObject>()
-
-                detectedObjects.forEach { detectedObject ->
-                    // Check if an object with this trackingId already exists
-                    val existingScannedObject = currentObjects.find {
-                        it.detectedObject.trackingId == detectedObject.trackingId
-                    }
-
-                    if (existingScannedObject != null) {
-                        // If exists, update its DetectedObject (e.g., bounding box, labels might change)
-                        // Remove from currentObjects to mark it as processed
-                        currentObjects.remove(existingScannedObject)
-                        updatedObjects.add(ScannedObject(detectedObject = detectedObject, imageUri = null))
-                    } else {
-                        // If new, add it
-                        updatedObjects.add(ScannedObject(detectedObject = detectedObject, imageUri = null))
-                    }
-                }
-                _objectResults.value = updatedObjects
+                val previousStaticObjects = _objectResults.value.filter { it.imageUri != null }
+                _objectResults.value = (previousStaticObjects + detectedObjects.map { detectedObject ->
+                    ScannedObject(detectedObject = detectedObject, imageUri = null)
+                }).distinctBy { it.detectedObject.trackingId }
             }.onFailure { e ->
                 // If scanning fails, update the UI state to an error state.
                 _uiState.value = UiState.Error("Live scanning failed: ${e.message}")
@@ -105,14 +80,9 @@ class ObjectDetectionViewModel @Inject constructor(
             // Call the repository to scan the static image.
             val result = objectDetectionRepository.scanStaticImage(inputImage)
             result.onSuccess { detectedObjects ->
-                // Convert ML Kit Barcode objects to custom ScannedBarcode domain models,
-                // including the imageUri for static scans.
-                val newObjects = detectedObjects.map { detectedObject ->
+                _objectResults.value = _objectResults.value + detectedObjects.map { detectedObject ->
                     ScannedObject(detectedObject = detectedObject, imageUri = imageUri)
-                }
-                // Update the barcode results, ensuring no duplicates based on rawValue.
-                val updatedList = (_objectResults.value + newObjects).distinctBy { it.detectedObject }
-                _objectResults.value = updatedList
+                }.distinctBy { it.detectedObject.trackingId }
 
                 // Reset UI state to Idle after successful scanning.
                 _uiState.value = UiState.Idle

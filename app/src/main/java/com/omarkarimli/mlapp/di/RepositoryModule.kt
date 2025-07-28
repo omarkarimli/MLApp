@@ -1,11 +1,13 @@
 package com.omarkarimli.mlapp.di
 
 import com.omarkarimli.mlapp.data.repository.BarcodeScanningRepositoryImpl
+import com.omarkarimli.mlapp.data.repository.FaceMeshDetectionRepositoryImpl
 import com.omarkarimli.mlapp.data.repository.ImageLabelingRepositoryImpl
 import com.omarkarimli.mlapp.data.repository.ObjectDetectionRepositoryImpl
 import com.omarkarimli.mlapp.data.repository.PermissionRepositoryImpl
 import com.omarkarimli.mlapp.data.repository.TextRecognitionRepositoryImpl
 import com.omarkarimli.mlapp.domain.repository.BarcodeScanningRepository
+import com.omarkarimli.mlapp.domain.repository.FaceMeshDetectionRepository
 import com.omarkarimli.mlapp.domain.repository.ImageLabelingRepository
 import com.omarkarimli.mlapp.domain.repository.ObjectDetectionRepository
 import com.omarkarimli.mlapp.domain.repository.PermissionRepository
@@ -49,4 +51,10 @@ abstract class RepositoryModule {
     abstract fun bindObjectDetectionRepository(
         objectDetectionRepositoryImpl: ObjectDetectionRepositoryImpl
     ): ObjectDetectionRepository
+
+    @Binds
+    @Singleton
+    abstract fun bindFaceMeshDetectionRepository(
+        faceMeshDetectionRepositoryImpl: FaceMeshDetectionRepositoryImpl
+    ): FaceMeshDetectionRepository
 }
