@@ -1,4 +1,4 @@
-package com.omarkarimli.mlapp.ui.presentation.ui.components
+package com.omarkarimli.mlapp.ui.presentation.ui.common
 
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row

@@ -10,7 +10,7 @@ import com.google.mlkit.vision.common.InputImage
 import com.omarkarimli.mlapp.domain.models.ImageLabelResult
 import com.omarkarimli.mlapp.domain.repository.ImageLabelingRepository
 import com.omarkarimli.mlapp.domain.repository.PermissionRepository
-import com.omarkarimli.mlapp.ui.presentation.ui.components.UiState
+import com.omarkarimli.mlapp.ui.presentation.ui.common.UiState
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow

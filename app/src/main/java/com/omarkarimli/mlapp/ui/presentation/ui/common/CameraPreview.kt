@@ -1,4 +1,4 @@
-package com.omarkarimli.mlapp.ui.presentation.ui.components
+package com.omarkarimli.mlapp.ui.presentation.ui.common
 
 import android.util.Log
 import androidx.camera.core.CameraSelector

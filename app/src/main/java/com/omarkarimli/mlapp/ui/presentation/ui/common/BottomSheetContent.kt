@@ -1,4 +1,4 @@
-package com.omarkarimli.mlapp.ui.presentation.ui.components
+package com.omarkarimli.mlapp.ui.presentation.ui.common
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -12,6 +12,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.FlipCameraIos
+import androidx.compose.material.icons.rounded.StopCircle
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -28,12 +29,15 @@ import com.omarkarimli.mlapp.utils.Dimens
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun BottomSheetContent(resultCards: List<ResultCardModel>, onFlipCamera: () -> Unit) {
+fun BottomSheetContent(resultCards: List<ResultCardModel>, onFlipCamera: () -> Unit, onStopOrPlayCamera: () -> Unit) {
     Column(modifier = Modifier.fillMaxWidth().padding(horizontal = Dimens.PaddingMedium), horizontalAlignment = Alignment.CenterHorizontally) {
         Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
-            Text("Detected Barcodes", modifier = Modifier.padding(bottom = Dimens.PaddingSmall), textAlign = TextAlign.Start, style = MaterialTheme.typography.titleLarge, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Text("Results", modifier = Modifier.padding(bottom = Dimens.PaddingSmall), textAlign = TextAlign.Start, style = MaterialTheme.typography.titleLarge, maxLines = 1, overflow = TextOverflow.Ellipsis)
             IconButton(onClick = onFlipCamera, modifier = Modifier.size(Dimens.IconSizeLarge)) {
                 Icon(Icons.Rounded.FlipCameraIos, contentDescription = "Flip Camera")
+            }
+            IconButton(onClick = onStopOrPlayCamera, modifier = Modifier.size(Dimens.IconSizeLarge)) {
+                Icon(Icons.Rounded.StopCircle, contentDescription = "Stop Camera")
             }
         }
         if (resultCards.isEmpty()) {
