@@ -33,7 +33,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import androidx.hilt.navigation.compose.hiltViewModel
-import com.omarkarimli.mlapp.domain.models.toResultCards
+import com.omarkarimli.mlapp.utils.toResultCards
 import com.omarkarimli.mlapp.ui.presentation.ui.common.widget.BottomSheetContent
 import com.omarkarimli.mlapp.ui.presentation.ui.common.widget.CameraPreview
 import com.omarkarimli.mlapp.ui.presentation.ui.common.widget.ToggleButton

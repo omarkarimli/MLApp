@@ -31,12 +31,12 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import androidx.hilt.navigation.compose.hiltViewModel
-import com.omarkarimli.mlapp.domain.models.toResultCards
 import com.omarkarimli.mlapp.ui.presentation.ui.common.widget.BottomSheetContent
 import com.omarkarimli.mlapp.ui.presentation.ui.common.widget.CameraPreview
 import com.omarkarimli.mlapp.ui.presentation.ui.common.widget.ToggleButton
 import com.omarkarimli.mlapp.ui.presentation.ui.common.state.UiState
 import com.omarkarimli.mlapp.utils.showToast
+import com.omarkarimli.mlapp.utils.toResultCards
 
 @androidx.compose.ui.tooling.preview.Preview(showBackground = true)
 @Composable
