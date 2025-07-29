@@ -1,4 +1,4 @@
-package com.omarkarimli.mlapp.ui.presentation.ui.common
+package com.omarkarimli.mlapp.ui.presentation.ui.common.state
 
 sealed class UiState {
     object Idle : UiState()

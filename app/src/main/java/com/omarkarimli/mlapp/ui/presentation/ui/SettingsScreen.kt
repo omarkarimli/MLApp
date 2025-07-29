@@ -39,7 +39,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.navigation.NavHostController
 import com.omarkarimli.mlapp.domain.models.ListItemModel
-import com.omarkarimli.mlapp.ui.presentation.ui.common.ListItemUi
+import com.omarkarimli.mlapp.ui.presentation.ui.common.widget.ListItemUi
 import com.omarkarimli.mlapp.utils.Dimens
 
 @OptIn(ExperimentalMaterial3Api::class)

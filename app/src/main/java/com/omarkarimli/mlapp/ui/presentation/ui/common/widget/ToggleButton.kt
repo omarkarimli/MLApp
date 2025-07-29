@@ -1,4 +1,4 @@
-package com.omarkarimli.mlapp.ui.presentation.ui.common
+package com.omarkarimli.mlapp.ui.presentation.ui.common.widget
 
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
@@ -22,22 +22,14 @@ fun ToggleButton(
         modifier = Modifier.size(Dimens.IconSizeLarge),
         shape = IconButtonDefaults.filledShape,
         colors = IconButtonDefaults.filledIconButtonColors(
-            containerColor = if (isToggled) MaterialTheme.colorScheme.surfaceContainer else MaterialTheme.colorScheme.onSurface,
-            contentColor = if (isToggled) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.surfaceContainer
+            containerColor = if (isToggled) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.onPrimaryContainer,
+            contentColor = if (isToggled) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.primaryContainer
         )
     ) {
-        if (isToggled) {
-            Icon(
-                imageVector = Icons.Filled.Pause,
-                contentDescription = "Pause Camera",
-                modifier = Modifier.size(Dimens.IconSizeSmall)
-            )
-        } else {
-            Icon(
-                imageVector = Icons.Filled.PlayArrow,
-                contentDescription = "Play Camera",
-                modifier = Modifier.size(Dimens.IconSizeSmall)
-            )
-        }
+        Icon(
+            imageVector = if (isToggled) Icons.Filled.Pause else Icons.Filled.PlayArrow,
+            contentDescription = if (isToggled) "Pause Camera" else "Play Camera",
+            modifier = Modifier.size(Dimens.IconSizeSmall)
+        )
     }
 }

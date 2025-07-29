@@ -1,4 +1,4 @@
-package com.omarkarimli.mlapp.ui.presentation.ui.common
+package com.omarkarimli.mlapp.ui.presentation.ui.common.widget
 
 import android.content.Context
 import android.graphics.ImageDecoder

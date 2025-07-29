@@ -70,7 +70,7 @@ import androidx.navigation.NavHostController
 import com.omarkarimli.mlapp.R
 import com.omarkarimli.mlapp.domain.models.ListItemModel
 import com.omarkarimli.mlapp.ui.navigation.Screen
-import com.omarkarimli.mlapp.ui.presentation.ui.common.ListItemUi
+import com.omarkarimli.mlapp.ui.presentation.ui.common.widget.ListItemUi
 import com.omarkarimli.mlapp.ui.theme.MLAppTheme
 import com.omarkarimli.mlapp.utils.Dimens
 

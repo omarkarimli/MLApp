@@ -7,6 +7,9 @@ object Dimens {
     // Static Device Ratio
     val staticDeviceRatio: Float = 1080f / 2400f
 
+    // Duration anim
+    const val animDurationMedium = 500
+
     // Toast
     const val toastDurationMillis = 300L
     const val textAnimationDelayMillis: Long = 600L // Delay before text starts animating
@@ -33,12 +36,20 @@ object Dimens {
     val IconSizeSmall = 20.dp
     val IconSizeMedium = 24.dp
     val IconSizeLarge = 32.dp
-    val IconSizeExtraLarge = 48.dp // For things like the image in the card
+    val IconSizeExtraLarge = 48.dp
+    val IconSizeDisplayMedium = 60.dp
+    val IconSizeDisplayLarge = 80.dp
 
-    // Corner Radii
+    // Corner Radius
     val CornerRadiusSmall = 4.dp
     val CornerRadiusMedium = 8.dp
     val CornerRadiusLarge = 16.dp
+    val CornerRadiusExtraLarge = 32.dp
+
+    // Gradient Radius
+    val GradientRadiusSmall = 12.dp
+    val GradientRadiusMedium = 24.dp
+    val GradientRadiusLarge = 36.dp
 
     // Component specific
     val BottomSheetImageSize = 52.dp

@@ -26,7 +26,7 @@ import androidx.compose.ui.viewinterop.AndroidView
 import androidx.navigation.NavHostController
 import com.google.mlkit.vision.common.InputImage
 import com.omarkarimli.mlapp.ui.navigation.Screen
-import com.omarkarimli.mlapp.ui.presentation.ui.common.CameraPermissionPlaceholder
+import com.omarkarimli.mlapp.ui.presentation.ui.common.widget.CameraPermissionPlaceholder
 import com.omarkarimli.mlapp.ui.theme.MLAppTheme
 import com.omarkarimli.mlapp.utils.Dimens
 import kotlinx.coroutines.Dispatchers
@@ -34,10 +34,10 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.omarkarimli.mlapp.domain.models.toResultCards
-import com.omarkarimli.mlapp.ui.presentation.ui.common.BottomSheetContent
-import com.omarkarimli.mlapp.ui.presentation.ui.common.CameraPreview
-import com.omarkarimli.mlapp.ui.presentation.ui.common.ToggleButton
-import com.omarkarimli.mlapp.ui.presentation.ui.common.UiState
+import com.omarkarimli.mlapp.ui.presentation.ui.common.widget.BottomSheetContent
+import com.omarkarimli.mlapp.ui.presentation.ui.common.widget.CameraPreview
+import com.omarkarimli.mlapp.ui.presentation.ui.common.widget.ToggleButton
+import com.omarkarimli.mlapp.ui.presentation.ui.common.state.UiState
 import com.omarkarimli.mlapp.utils.showToast
 
 @androidx.compose.ui.tooling.preview.Preview(showBackground = true)
