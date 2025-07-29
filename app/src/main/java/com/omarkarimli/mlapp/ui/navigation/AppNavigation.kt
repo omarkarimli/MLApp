@@ -30,7 +30,7 @@ import com.omarkarimli.mlapp.ui.presentation.ui.LoginScreen
 import com.omarkarimli.mlapp.ui.presentation.ui.objectdetection.ObjectDetectionScreen
 import com.omarkarimli.mlapp.ui.presentation.ui.OnboardingScreen
 import com.omarkarimli.mlapp.ui.presentation.ui.SettingsScreen
-import com.omarkarimli.mlapp.ui.presentation.ui.SplashScreen
+import com.omarkarimli.mlapp.ui.presentation.ui.splash.SplashScreen
 import com.omarkarimli.mlapp.ui.presentation.ui.barcodescanning.BarcodeScanningScreen
 import com.omarkarimli.mlapp.ui.presentation.ui.textrecognition.TextRecognitionScreen
 

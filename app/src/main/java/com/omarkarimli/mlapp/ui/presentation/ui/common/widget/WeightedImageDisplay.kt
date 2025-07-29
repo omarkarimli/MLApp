@@ -22,7 +22,7 @@ import androidx.compose.ui.res.painterResource
 import com.omarkarimli.mlapp.R
 import com.omarkarimli.mlapp.utils.Dimens
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.isActive // Import isActive
+import kotlinx.coroutines.isActive
 
 @Composable
 fun WeightedImageDisplay(modifier: Modifier = Modifier) {
@@ -80,9 +80,9 @@ fun WeightedImageDisplay(modifier: Modifier = Modifier) {
             horizontalArrangement = Arrangement.spacedBy(Dimens.SpacerMedium)
         ) {
             val images = listOf(
-                painterResource(id = R.drawable.g1),
-                painterResource(id = R.drawable.g2),
-                painterResource(id = R.drawable.g3)
+                painterResource(id = R.drawable.onboarding_image_1),
+                painterResource(id = R.drawable.onboarding_image_2),
+                painterResource(id = R.drawable.onboarding_image_3)
             )
 
             images.forEachIndexed { index, imageResource ->

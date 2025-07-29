@@ -36,6 +36,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
@@ -69,7 +70,7 @@ private fun ScrollContent(
     navController: NavHostController
 ) {
     val onboardingPages = listOf(
-        OnboardingPageData(R.drawable.onboarding_image_1, "Welcome to MyCollab!", "Share and collaborate with friends and family."),
+        OnboardingPageData(R.drawable.onboarding_image_1, "Welcome to ${stringResource(id = R.string.app_name)}!", "Share and collaborate with friends and family."),
         OnboardingPageData(R.drawable.onboarding_image_2, "Collaborate with ease.", "Easily share, collab with friends & family."),
         OnboardingPageData(R.drawable.onboarding_image_3, "Stay organized.", "Use AI to detect contents, workflows.")
     )

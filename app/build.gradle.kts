@@ -82,6 +82,7 @@ dependencies {
 
     // Coil
     implementation("io.coil-kt:coil-compose:2.7.0")
+    implementation("io.coil-kt:coil-gif:2.7.0") // For GIFs
 
     // Image Labeling
     implementation("com.google.mlkit:image-labeling:17.0.9")

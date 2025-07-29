@@ -167,7 +167,7 @@ private fun MyTopAppBar(scrollBehavior: TopAppBarScrollBehavior, items: List<Lis
                     overflow = TextOverflow.Ellipsis,
                     style = if (isTopAppBarMinimized) MaterialTheme.typography.headlineSmall else MaterialTheme.typography.headlineMedium,
                     fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onSurface
+                    color = MaterialTheme.colorScheme.primary
                 )
             }
         },

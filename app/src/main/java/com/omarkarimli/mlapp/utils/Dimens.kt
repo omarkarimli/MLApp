@@ -10,6 +10,9 @@ object Dimens {
     // Duration anim
     const val animDurationMedium = 500
 
+    // Splash Duration
+    const val splashDuration = 3000L
+
     // Toast
     const val toastDurationMillis = 300L
     const val textAnimationDelayMillis: Long = 600L // Delay before text starts animating
