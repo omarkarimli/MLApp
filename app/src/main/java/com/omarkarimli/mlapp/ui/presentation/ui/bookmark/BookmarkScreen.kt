@@ -12,14 +12,15 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material.icons.rounded.ClearAll
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilledTonalIconButton
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
@@ -38,20 +39,23 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.dp
+import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavHostController
+import androidx.paging.LoadState
+import androidx.paging.compose.LazyPagingItems
+import androidx.paging.compose.collectAsLazyPagingItems
 import com.omarkarimli.mlapp.domain.models.ResultCardModel
+import com.omarkarimli.mlapp.ui.navigation.Screen
 import com.omarkarimli.mlapp.ui.presentation.ui.common.widget.ResultCard
 import com.omarkarimli.mlapp.utils.Dimens
-import androidx.hilt.navigation.compose.hiltViewModel
-import com.omarkarimli.mlapp.ui.navigation.Screen
-import com.omarkarimli.mlapp.ui.theme.MLAppTheme
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -59,7 +63,8 @@ fun BookmarkScreen(navController: NavHostController) {
     val scrollBehavior = TopAppBarDefaults.enterAlwaysScrollBehavior(rememberTopAppBarState())
 
     val viewModel: BookmarkViewModel = hiltViewModel()
-    val savedResults by viewModel.savedResults.collectAsState()
+    val savedResults = viewModel.savedResults.collectAsLazyPagingItems() // Collect PagingData
+    val searchQuery by viewModel.searchQuery.collectAsState() // Observe search query from ViewModel
 
     // State to control the visibility of the alert dialog
     var showClearAllDialog by remember { mutableStateOf(false) }
@@ -69,24 +74,30 @@ fun BookmarkScreen(navController: NavHostController) {
         topBar = {
             MyTopAppBar(
                 scrollBehavior = scrollBehavior,
-                onClearAllClicked = { showClearAllDialog = true } // Set dialog to visible
+                savedResults = savedResults,
+                onClearAllClicked = { showClearAllDialog = true }
             )
         }
     ) { innerPadding ->
-        ScrollContent(innerPadding, savedResults)
+        // Pass the PagingItems and the search query/setter
+        ScrollContent(
+            innerPadding = innerPadding,
+            savedResults = savedResults,
+            searchQuery = searchQuery,
+            onSearchQueryChanged = viewModel::setSearchQuery
+        )
     }
 
-    // Show the AlertDialog if showClearAllDialog is true
     if (showClearAllDialog) {
         AlertDialog(
-            onDismissRequest = { showClearAllDialog = false }, // Dismiss the dialog if clicked outside
+            onDismissRequest = { showClearAllDialog = false },
             title = { Text("Clear All Bookmarks?") },
             text = { Text("Are you sure you want to delete all your saved bookmarks? This action cannot be undone.") },
             confirmButton = {
                 TextButton(
                     onClick = {
-                        viewModel.clearAllSavedResults() // Perform the clear operation
-                        showClearAllDialog = false // Dismiss the dialog
+                        viewModel.clearAllSavedResults()
+                        showClearAllDialog = false
                     }
                 ) {
                     Text("Clear All")
@@ -94,7 +105,7 @@ fun BookmarkScreen(navController: NavHostController) {
             },
             dismissButton = {
                 TextButton(
-                    onClick = { showClearAllDialog = false } // Dismiss the dialog
+                    onClick = { showClearAllDialog = false }
                 ) {
                     Text("Cancel")
                 }
@@ -105,7 +116,7 @@ fun BookmarkScreen(navController: NavHostController) {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun MyTopAppBar(scrollBehavior: TopAppBarScrollBehavior, onClearAllClicked: () -> Unit) {
+private fun MyTopAppBar(scrollBehavior: TopAppBarScrollBehavior, savedResults: LazyPagingItems<ResultCardModel>, onClearAllClicked: () -> Unit) {
     val isTopAppBarMinimized = scrollBehavior.state.collapsedFraction > 0.5
     MediumTopAppBar(
         scrollBehavior = scrollBehavior,
@@ -126,7 +137,9 @@ private fun MyTopAppBar(scrollBehavior: TopAppBarScrollBehavior, onClearAllClick
         },
         actions = {
             FilledTonalIconButton(
-                onClick = onClearAllClicked, // Call the lambda when clicked
+                onClick = {
+                    if (savedResults.itemCount > 0) onClearAllClicked()
+                },
                 modifier = Modifier
                     .width(Dimens.IconSizeExtraLarge)
                     .height(Dimens.IconSizeLarge),
@@ -146,20 +159,10 @@ private fun MyTopAppBar(scrollBehavior: TopAppBarScrollBehavior, onClearAllClick
 @Composable
 private fun ScrollContent(
     innerPadding: PaddingValues,
-    savedResults: List<ResultCardModel>
+    savedResults: LazyPagingItems<ResultCardModel>, // Paging items
+    searchQuery: String, // Search query from ViewModel
+    onSearchQueryChanged: (String) -> Unit // Callback to update search query in ViewModel
 ) {
-    var searchText by remember { mutableStateOf("") }
-
-    val filteredSavedResults = remember(searchText, savedResults) {
-        if (searchText.isBlank()) {
-            savedResults
-        } else {
-            savedResults.filter {
-                it.title.contains(searchText, ignoreCase = true) || it.subtitle.contains(searchText, ignoreCase = true)
-            }
-        }
-    }
-
     Column(
         modifier = Modifier
             .padding(
@@ -171,8 +174,8 @@ private fun ScrollContent(
         Spacer(modifier = Modifier.height(Dimens.SpacerExtraLarge))
         // Search
         TextField(
-            value = searchText,
-            onValueChange = { newText -> searchText = newText },
+            value = searchQuery, // Use state from ViewModel
+            onValueChange = onSearchQueryChanged, // Update ViewModel on change
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(horizontal = Dimens.PaddingLarge)
@@ -196,7 +199,6 @@ private fun ScrollContent(
 
         Spacer(modifier = Modifier.height(Dimens.SpacerMedium))
 
-        // LazyColumn for the scrollable list of "Recent Saved" section
         LazyColumn(
             modifier = Modifier
                 .fillMaxWidth()
@@ -204,48 +206,72 @@ private fun ScrollContent(
             verticalArrangement = Arrangement.spacedBy(Dimens.PaddingSmall),
             contentPadding = PaddingValues(horizontal = Dimens.PaddingLarge)
         ) {
-            item {
-                if (filteredSavedResults.isEmpty()) {
-                    Text(
-                        text = "No saved item found",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.padding(vertical = Dimens.PaddingMedium)
-                    )
-                } else {
-                    Column(
-                        modifier = Modifier.fillMaxWidth(),
-                        verticalArrangement = Arrangement.spacedBy(Dimens.PaddingExtraSmall)
-                    ) {
-                        filteredSavedResults.forEachIndexed { index, resultCard ->
-                            ResultCard(resultCard)
-                            if (index < filteredSavedResults.lastIndex) HorizontalDivider()
+            items(
+                items = savedResults.itemSnapshotList.items,
+                key = { result ->
+                    result.id
+                }
+            ) { result ->
+                ResultCard(result)
+            }
+
+            // Handle loading states from Paging 3
+            savedResults.apply {
+                when {
+                    loadState.refresh is LoadState.Loading -> {
+                        item {
+                            Column(
+                                modifier = Modifier.fillParentMaxSize(), // fills parent size
+                                verticalArrangement = Arrangement.Center,
+                                horizontalAlignment = Alignment.CenterHorizontally // centers horizontally
+                            ) {
+                                CircularProgressIndicator()
+                            }
+                        }
+                    }
+                    loadState.append is LoadState.Loading -> {
+                        item {
+                            CircularProgressIndicator(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(16.dp)
+                                    .align(Alignment.CenterHorizontally)
+                            )
+                        }
+                    }
+                    loadState.refresh is LoadState.Error || loadState.append is LoadState.Error -> {
+                        item {
+                            val error = (loadState.refresh as? LoadState.Error)?.error
+                                ?: (loadState.append as? LoadState.Error)?.error
+                            Text(
+                                text = "Error: ${error?.localizedMessage ?: "Unknown error"}",
+                                color = MaterialTheme.colorScheme.error,
+                                modifier = Modifier.padding(vertical = Dimens.PaddingMedium)
+                            )
+                        }
+                    }
+                    // Handle empty states based on loaded items and search query
+                    itemCount == 0 && loadState.refresh is LoadState.NotLoading -> {
+                        item {
+                            if (searchQuery.isNotBlank()) {
+                                Text(
+                                    text = "No items matching \"$searchQuery\"",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    modifier = Modifier.padding(vertical = Dimens.PaddingMedium)
+                                )
+                            } else {
+                                Text(
+                                    text = "No saved items found",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    modifier = Modifier.padding(vertical = Dimens.PaddingMedium)
+                                )
+                            }
                         }
                     }
                 }
             }
-        }
-    }
-}
-
-@Preview(showBackground = true)
-@Composable
-fun BookmarkPreview() {
-    MLAppTheme {
-        Column {
-            // For preview purposes, we'll pass a dummy lambda for onClearAllClicked
-            MyTopAppBar(
-                scrollBehavior = TopAppBarDefaults.enterAlwaysScrollBehavior(rememberTopAppBarState()),
-                onClearAllClicked = { /* Do nothing in preview */ }
-            )
-            ScrollContent(
-                innerPadding = PaddingValues(),
-                savedResults = listOf(
-                    ResultCardModel(id = 1, title = "Saved Barcode 1", subtitle = "EAN-13", imageUri = null),
-                    ResultCardModel(id = 2, title = "Saved QR Code", subtitle = "URL: example.com", imageUri = null),
-                    ResultCardModel(id = 3, title = "Saved Image Label", subtitle = "Cat, Animal", imageUri = null)
-                )
-            )
         }
     }
 }

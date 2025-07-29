@@ -1,22 +1,24 @@
 package com.omarkarimli.mlapp.data.dao
 
+import androidx.paging.PagingSource
 import androidx.room.Dao
 import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
-import com.omarkarimli.mlapp.domain.models.ResultCardModel // Import your ResultCardModel
+import com.omarkarimli.mlapp.domain.models.ResultCardModel
 import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface ResultCardDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun insertResultCard(resultCard: ResultCardModel) // Now inserts ResultCardModel directly
+    suspend fun insertResultCard(resultCard: ResultCardModel)
 
-    @Query("SELECT * FROM scanned_results ORDER BY id DESC")
-    fun getAllResultCards(): Flow<List<ResultCardModel>> // Returns Flow of ResultCardModel
+    @Query("SELECT * FROM scanned_results WHERE title LIKE '%' || :searchQuery || '%' OR subtitle LIKE '%' || :searchQuery || '%' ORDER BY id DESC")
+    fun getPaginatedResultCardsPagingSource(searchQuery: String): PagingSource<Int, ResultCardModel>
 
     @Query("DELETE FROM scanned_results")
     suspend fun deleteAllResults()
 
-    // You might add more operations like delete by id, update, etc.
+    @Query("SELECT * FROM scanned_results ORDER BY id DESC LIMIT :limit")
+    fun getRecentResults(limit: Int): Flow<List<ResultCardModel>>
 }

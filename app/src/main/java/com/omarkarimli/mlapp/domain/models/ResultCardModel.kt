@@ -14,5 +14,6 @@ data class ResultCardModel(
     @ColumnInfo(name = "subtitle")
     val subtitle: String,
     @ColumnInfo(name = "image_uri")
-    val imageUri: Uri? = null
+    val imageUri: Uri? = null,
+    val timestamp: Long = System.currentTimeMillis()
 )

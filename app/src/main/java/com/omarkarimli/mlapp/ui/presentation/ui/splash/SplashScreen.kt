@@ -39,9 +39,7 @@ fun SplashScreen(navController: NavHostController) {
         modifier = Modifier.fillMaxSize(),
     ) { innerPadding ->
         Surface(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(innerPadding),
+            modifier = Modifier.fillMaxSize(),
             color = Color.White
         ) {
             AsyncImage(

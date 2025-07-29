@@ -11,4 +11,7 @@ object Constants {
 
     // AI
     const val NOT_APPLICABLE = "N/A"
+
+    const val RECENT_SAVED_COUNT = 3
+    const val MAX_PAGE_CHILD_COUNT = 10
 }
