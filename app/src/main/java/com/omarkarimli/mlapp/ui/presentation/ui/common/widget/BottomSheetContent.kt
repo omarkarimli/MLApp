@@ -41,7 +41,7 @@ fun BottomSheetContent(resultCards: List<ResultCardModel>, onFlipCamera: () -> U
         if (resultCards.isEmpty()) {
             Text("Nothing detected yet. Scan live or pick an image.", modifier = Modifier.fillMaxWidth().padding(Dimens.PaddingSmall), textAlign = TextAlign.Start, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
         } else {
-            LazyColumn(modifier = Modifier.fillMaxWidth().heightIn(max = Dimens.BarcodeListMaxHeight), contentPadding = PaddingValues(vertical = Dimens.PaddingExtraSmall)) {
+            LazyColumn(modifier = Modifier.fillMaxWidth().heightIn(max = Dimens.ListMaxHeight), contentPadding = PaddingValues(vertical = Dimens.PaddingExtraSmall)) {
                 itemsIndexed(resultCards) { index, resultCard ->
                     ResultCard(resultCard)
                     if (index < resultCards.lastIndex) HorizontalDivider()

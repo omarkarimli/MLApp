@@ -10,7 +10,9 @@ import com.google.mlkit.vision.common.InputImage
 import com.omarkarimli.mlapp.domain.models.ScannedFaceMesh
 import com.omarkarimli.mlapp.domain.repository.FaceMeshDetectionRepository
 import com.omarkarimli.mlapp.domain.repository.PermissionRepository
+import com.omarkarimli.mlapp.domain.repository.RoomRepository
 import com.omarkarimli.mlapp.ui.presentation.ui.common.state.UiState
+import com.omarkarimli.mlapp.utils.toResultCards
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -21,7 +23,8 @@ import javax.inject.Inject
 @HiltViewModel
 class FaceMeshDetectionViewModel @Inject constructor(
     val permissionRepository: PermissionRepository,
-    private val faceMeshDetectionRepository: FaceMeshDetectionRepository
+    private val faceMeshDetectionRepository: FaceMeshDetectionRepository,
+    private val roomRepository: RoomRepository
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow<UiState>(UiState.Idle)
@@ -109,10 +112,10 @@ class FaceMeshDetectionViewModel @Inject constructor(
     fun toggleCameraActive() {
         if (hasCameraPermission.value) {
             _isCameraActive.value = !_isCameraActive.value
-            // Clear live analysis results when pausing, keep static ones
-            if (!_isCameraActive.value) {
-                _faceMeshResults.value = _faceMeshResults.value.filter { it.imageUri != null }
-            }
+//            // Clear live analysis results when pausing, keep static ones
+//            if (!_isCameraActive.value) {
+//                _faceMeshResults.value = _faceMeshResults.value.filter { it.imageUri != null }
+//            }
         } else {
             _uiState.value = UiState.Error("Camera permission is required to toggle camera active state.")
         }
@@ -120,5 +123,19 @@ class FaceMeshDetectionViewModel @Inject constructor(
 
     fun resetUiState() {
         _uiState.value = UiState.Idle
+    }
+
+    fun saveCurrentResults() {
+        viewModelScope.launch {
+            val resultCardsToSave = _faceMeshResults.value.toResultCards()
+            if (resultCardsToSave.isNotEmpty()) {
+                resultCardsToSave.forEach { resultCard ->
+                    roomRepository.saveResultCard(resultCard)
+                }
+                _uiState.value = UiState.Idle // Indicate successful save
+            } else {
+                _uiState.value = UiState.Error("Nothing to save.")
+            }
+        }
     }
 }

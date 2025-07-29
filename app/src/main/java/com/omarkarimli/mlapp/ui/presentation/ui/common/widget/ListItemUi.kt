@@ -23,6 +23,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.omarkarimli.mlapp.domain.models.ListItemModel
+import com.omarkarimli.mlapp.utils.Dimens
 
 @Composable
 fun ListItemUi(
@@ -36,7 +37,7 @@ fun ListItemUi(
     ) {
         Row(
             modifier = Modifier
-                .padding(vertical = 16.dp, horizontal = 24.dp)
+                .padding(vertical = Dimens.PaddingMedium, horizontal = Dimens.PaddingSmall)
                 .fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceBetween

@@ -1,6 +1,7 @@
 package com.omarkarimli.mlapp.ui.presentation.ui.splash
 
 import androidx.compose.foundation.layout.*
+import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -34,24 +35,30 @@ fun SplashScreen(navController: NavHostController) {
         .crossfade(true)
         .build()
 
-    Surface(
+    Scaffold(
         modifier = Modifier.fillMaxSize(),
-        color = Color.White
-    ) {
-        AsyncImage(
-            model = splashImage,
-            imageLoader = imageLoader, // Use the Hilt-provided imageLoader
-            contentDescription = "Splash GIF",
+    ) { innerPadding ->
+        Surface(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(Dimens.PaddingExtraLarge),
-            contentScale = ContentScale.Fit
-        )
+                .padding(innerPadding),
+            color = Color.White
+        ) {
+            AsyncImage(
+                model = splashImage,
+                imageLoader = imageLoader, // Use the Hilt-provided imageLoader
+                contentDescription = "Splash GIF",
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(Dimens.PaddingExtraLarge),
+                contentScale = ContentScale.Fit
+            )
 
-        LaunchedEffect(key1 = navigate) {
-            if (navigate) {
-                navController.navigate(Screen.Onboarding.route) {
-                    popUpTo(Screen.Splash.route) { inclusive = true }
+            LaunchedEffect(key1 = navigate) {
+                if (navigate) {
+                    navController.navigate(Screen.Onboarding.route) {
+                        popUpTo(Screen.Splash.route) { inclusive = true }
+                    }
                 }
             }
         }

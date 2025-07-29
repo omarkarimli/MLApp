@@ -1,6 +1,7 @@
 package com.omarkarimli.mlapp.ui.presentation.ui.imagelabeling
 
 import android.Manifest
+import android.content.Intent
 import android.graphics.ImageDecoder
 import android.os.Build
 import android.provider.MediaStore
@@ -81,6 +82,22 @@ fun ImageLabelingScreen(navController: NavHostController) {
 
     val pickImageLauncher = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
         uri?.let { imageUri ->
+            // --- IMPORTANT: Persist URI permission here ---
+            // Flags for read and write access, depending on what you need.
+            // For displaying, Intent.FLAG_GRANT_READ_URI_PERMISSION is sufficient.
+            val takeFlag: Int = Intent.FLAG_GRANT_READ_URI_PERMISSION // or Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION
+
+            try {
+                // Request persistable permission
+                context.contentResolver.takePersistableUriPermission(imageUri, takeFlag)
+                Log.d("BarcodeScreen", "Persisted URI permission for: $imageUri")
+            } catch (e: SecurityException) {
+                Log.e("BarcodeScreen", "Failed to persist URI permission: ${e.message}", e)
+                context.showToast("Failed to get persistent access to the image.")
+                return@let // Exit if permission cannot be persisted
+            }
+            // --- End of IMPORTANT section ---
+
             coroutineScope.launch(Dispatchers.IO) {
                 try {
                     val bitmap = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
@@ -186,7 +203,9 @@ fun ImageLabelingScreen(navController: NavHostController) {
                     Spacer(Modifier.size(Dimens.SpacerSmall))
                     FilledTonalIconButton(
                         onClick = {
-                            context.showToast("Save functionality to be implemented")
+                            // Call the new save function in the ViewModel
+                            viewModel.saveCurrentResults()
+                            context.showToast("Results saved!") // Provide feedback
                         },
                         modifier = Modifier.width(Dimens.IconSizeExtraLarge).height(Dimens.IconSizeLarge),
                         shape = IconButtonDefaults.filledShape

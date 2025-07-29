@@ -10,19 +10,17 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.style.TextOverflow
 import com.omarkarimli.mlapp.domain.models.ResultCardModel
 import com.omarkarimli.mlapp.utils.Dimens
 
 @Composable
 fun ResultCard(resultCardModel: ResultCardModel) {
-    val context = LocalContext.current
-
     Row(modifier = Modifier.fillMaxWidth().padding(horizontal = Dimens.PaddingExtraSmall, vertical = Dimens.PaddingMedium), verticalAlignment = Alignment.CenterVertically) {
-        Column(modifier = Modifier.weight(1f)) {
-            Text(resultCardModel.subtitle, style = MaterialTheme.typography.bodyMedium, color = Color.Gray)
-            Text(resultCardModel.title, style = MaterialTheme.typography.bodyLarge)
+        Column(modifier = Modifier.weight(1f).padding(end = Dimens.PaddingMedium)) {
+            Text(resultCardModel.subtitle, style = MaterialTheme.typography.bodyMedium, color = Color.Gray, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Text(resultCardModel.title, style = MaterialTheme.typography.bodyLarge, maxLines = 1, overflow = TextOverflow.Ellipsis)
         }
-        DetectedActionImage(context, resultCardModel.imageUri)
+        DetectedActionImage(resultCardModel.imageUri)
     }
 }

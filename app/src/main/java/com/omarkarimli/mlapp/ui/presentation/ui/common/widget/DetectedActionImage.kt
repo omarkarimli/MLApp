@@ -1,12 +1,7 @@
 package com.omarkarimli.mlapp.ui.presentation.ui.common.widget
 
-import android.content.Context
-import android.graphics.ImageDecoder
 import android.net.Uri
-import android.os.Build
-import android.provider.MediaStore
 import android.util.Log
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
@@ -28,97 +23,64 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import coil.compose.AsyncImage // Import AsyncImage
+import coil.request.ImageRequest // Import ImageRequest for more control
 import com.omarkarimli.mlapp.utils.Dimens
 
 @Composable
-fun DetectedActionImage(context: Context, imageUri: Uri?) {
+fun DetectedActionImage(imageUri: Uri?) {
+    val context = LocalContext.current
     var showFullscreenImage by remember { mutableStateOf(false) }
 
-    imageUri?.let { uri ->
-        val bitmap = remember(uri) {
-            try {
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
-                    val source = ImageDecoder.createSource(context.contentResolver, uri)
-                    ImageDecoder.decodeBitmap(source)
-                } else {
-                    @Suppress("DEPRECATION")
-                    MediaStore.Images.Media.getBitmap(context.contentResolver, uri)
-                }
-            } catch (e: Exception) {
-                Log.e("ActionImage", "Error loading image for card: ${e.message}", e)
-                null
-            }
-        }
-
-        bitmap?.let {
-            Image(
-                bitmap = it.asImageBitmap(),
-                contentDescription = "Picked ActionImage",
-                contentScale = ContentScale.Crop,
-                modifier = Modifier
-                    .size(Dimens.BottomSheetImageSize)
-                    .clip(RoundedCornerShape(Dimens.CornerRadiusMedium))
-                    .clickable { showFullscreenImage = true } // Make image clickable
-            )
-
-            if (showFullscreenImage) {
-                // Use Dialog for true fullscreen overlay
-                Dialog(
-                    onDismissRequest = { showFullscreenImage = false },
-                    properties = DialogProperties(usePlatformDefaultWidth = false) // Important for fullscreen
-                ) {
-                    FullscreenImageViewer(
-                        imageUri = uri,
-                        context = context,
-                        onDismiss = { showFullscreenImage = false }
-                    )
-                }
-            }
-        } ?: run {
-            ImageLoadErrorPlaceholder(modifier = Modifier.size(Dimens.BottomSheetImageSize))
-        }
-    }
-}
-
-@Composable
-fun ImageLoadErrorPlaceholder(modifier: Modifier = Modifier) {
-    Box(
-        modifier = modifier
-            .clip(RoundedCornerShape(Dimens.CornerRadiusMedium)),
-        contentAlignment = Alignment.Center
-    ) {
-        Icon(
-            Icons.Default.Photo,
-            contentDescription = "No Image",
-            tint = Color.Gray
+    if (imageUri != null) {
+        AsyncImage(
+            model = ImageRequest.Builder(context)
+                .data(imageUri)
+                .crossfade(true) // Optional: add a fade transition
+                // Optional: Add Coil listeners for debugging
+                .listener(
+                    onStart = { Log.d("CoilLoad", "Start loading: $imageUri") },
+                    onSuccess = { _, _ -> Log.d("CoilLoad", "Success loading: $imageUri") },
+                    onError = { _, result -> Log.e("CoilLoad", "Error loading: $imageUri, ${result.throwable.message}") }
+                )
+                .build(),
+            contentDescription = "Picked ActionImage",
+            contentScale = ContentScale.Crop,
+            modifier = Modifier
+                .size(Dimens.BottomSheetImageSize)
+                .clip(RoundedCornerShape(Dimens.CornerRadiusMedium))
+                .clickable { showFullscreenImage = true },
+            // Placeholder and error images are handled directly by AsyncImage
+            // You can replace R.drawable.image_placeholder and R.drawable.image_error with your actual drawables
+            // If you don't have specific drawables, you can remove these lines, and the contentDescription will be used for accessibility
+            // placeholder = painterResource(R.drawable.image_placeholder),
+            // error = painterResource(R.drawable.image_error)
         )
+
+        if (showFullscreenImage) {
+            Dialog(
+                onDismissRequest = { showFullscreenImage = false },
+                properties = DialogProperties(usePlatformDefaultWidth = false)
+            ) {
+                FullscreenImageViewer(
+                    imageUri = imageUri, // Pass the Uri directly
+                    onDismiss = { showFullscreenImage = false }
+                )
+            }
+        }
     }
 }
 
 @Composable
 fun FullscreenImageViewer(
     imageUri: Uri,
-    context: Context,
     onDismiss: () -> Unit
 ) {
-    val bitmap = remember(imageUri) {
-        try {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
-                val source = ImageDecoder.createSource(context.contentResolver, imageUri)
-                ImageDecoder.decodeBitmap(source)
-            } else {
-                @Suppress("DEPRECATION")
-                MediaStore.Images.Media.getBitmap(context.contentResolver, imageUri)
-            }
-        } catch (e: Exception) {
-            Log.e("FullscreenImageViewer", "Error loading fullscreen image: ${e.message}", e)
-            null
-        }
-    }
+    val context = LocalContext.current
 
     Box(
         modifier = Modifier
@@ -126,28 +88,22 @@ fun FullscreenImageViewer(
             .background(Color.Black),
         contentAlignment = Alignment.Center
     ) {
-        bitmap?.let {
-            Image(
-                bitmap = it.asImageBitmap(),
-                contentDescription = "Fullscreen Image",
-                contentScale = ContentScale.Fit, // Use Fit to show the whole image
-                modifier = Modifier
-                    .fillMaxSize()
-            )
-        } ?: run {
-            // Placeholder for error loading fullscreen image
-            Box(
-                modifier = Modifier.fillMaxSize(),
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(
-                    Icons.Default.Photo,
-                    contentDescription = "Could not load image",
-                    tint = Color.LightGray,
-                    modifier = Modifier.size(Dimens.BottomSheetImageSize)
+        AsyncImage(
+            model = ImageRequest.Builder(context)
+                .data(imageUri)
+                .crossfade(true)
+                .listener(
+                    onStart = { Log.d("CoilFullscreen", "Start loading: $imageUri") },
+                    onSuccess = { _, _ -> Log.d("CoilFullscreen", "Success loading: $imageUri") },
+                    onError = { _, result -> Log.e("CoilFullscreen", "Error loading: $imageUri, ${result.throwable.message}") }
                 )
-            }
-        }
+                .build(),
+            contentDescription = "Fullscreen Image",
+            contentScale = ContentScale.Fit, // Use Fit to show the whole image
+            modifier = Modifier.fillMaxSize(),
+            // placeholder = painterResource(R.drawable.image_placeholder),
+            // error = painterResource(R.drawable.image_error)
+        )
 
         // Close button
         IconButton(

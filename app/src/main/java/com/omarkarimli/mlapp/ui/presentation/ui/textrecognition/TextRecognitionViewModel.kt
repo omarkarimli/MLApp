@@ -8,8 +8,10 @@ import androidx.lifecycle.viewModelScope
 import com.google.mlkit.vision.common.InputImage
 import com.omarkarimli.mlapp.domain.models.RecognizedText
 import com.omarkarimli.mlapp.domain.repository.PermissionRepository
+import com.omarkarimli.mlapp.domain.repository.RoomRepository
 import com.omarkarimli.mlapp.domain.repository.TextRecognitionRepository // Import TextRecognitionRepository
 import com.omarkarimli.mlapp.ui.presentation.ui.common.state.UiState
+import com.omarkarimli.mlapp.utils.toResultCards
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -22,7 +24,8 @@ class TextRecognitionViewModel @Inject constructor(
     // Injects the PermissionRepository to manage camera and storage permissions.
     val permissionRepository: PermissionRepository,
     // Injects the TextRecognitionRepository to perform text recognition operations.
-    private val textRecognitionRepository: TextRecognitionRepository
+    private val textRecognitionRepository: TextRecognitionRepository,
+    private val roomRepository: RoomRepository
 ) : ViewModel() {
 
     // MutableStateFlow to hold the current UI state (Idle, Loading, Error, PermissionAction).
@@ -110,10 +113,10 @@ class TextRecognitionViewModel @Inject constructor(
     fun toggleCameraActive() {
         if (hasCameraPermission.value) {
             _isCameraActive.value = !_isCameraActive.value
-            // Clear live analysis results when pausing, keep static ones
-            if (!_isCameraActive.value) {
-                _textResults.value = _textResults.value.filter { it.imageUri != null }
-            }
+//            // Clear live analysis results when pausing, keep static ones
+//            if (!_isCameraActive.value) {
+//                _faceMeshResults.value = _faceMeshResults.value.filter { it.imageUri != null }
+//            }
         } else {
             _uiState.value = UiState.Error("Camera permission is required to toggle camera active state.")
         }
@@ -121,5 +124,19 @@ class TextRecognitionViewModel @Inject constructor(
 
     fun resetUiState() {
         _uiState.value = UiState.Idle
+    }
+
+    fun saveCurrentResults() {
+        viewModelScope.launch {
+            val resultCardsToSave = _textResults.value.toResultCards()
+            if (resultCardsToSave.isNotEmpty()) {
+                resultCardsToSave.forEach { resultCard ->
+                    roomRepository.saveResultCard(resultCard)
+                }
+                _uiState.value = UiState.Idle // Indicate successful save
+            } else {
+                _uiState.value = UiState.Error("Nothing to save.")
+            }
+        }
     }
 }

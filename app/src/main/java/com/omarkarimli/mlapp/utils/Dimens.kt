@@ -57,7 +57,7 @@ object Dimens {
     // Component specific
     val BottomSheetImageSize = 52.dp
     val BottomSheetPeekHeight = 150.dp
-    val BarcodeListMaxHeight = 384.dp
+    val ListMaxHeight = 384.dp
 
     // Spacer Heights
     val SpacerHeightSmall = 16.dp

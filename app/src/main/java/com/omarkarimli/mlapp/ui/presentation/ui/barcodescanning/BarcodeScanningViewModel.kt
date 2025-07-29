@@ -9,7 +9,9 @@ import com.google.mlkit.vision.common.InputImage
 import com.omarkarimli.mlapp.domain.models.ScannedBarcode
 import com.omarkarimli.mlapp.domain.repository.BarcodeScanningRepository
 import com.omarkarimli.mlapp.domain.repository.PermissionRepository
+import com.omarkarimli.mlapp.domain.repository.RoomRepository
 import com.omarkarimli.mlapp.ui.presentation.ui.common.state.UiState
+import com.omarkarimli.mlapp.utils.toResultCards
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -21,8 +23,8 @@ import javax.inject.Inject
 class BarcodeScanningViewModel @Inject constructor(
     // Injects the PermissionRepository to manage camera and storage permissions.
     val permissionRepository: PermissionRepository,
-    // Injects the BarcodeScanningRepository to perform barcode scanning operations.
-    private val barcodeRepository: BarcodeScanningRepository
+    private val barcodeRepository: BarcodeScanningRepository,
+    private val roomRepository: RoomRepository
 ) : ViewModel() {
 
     // MutableStateFlow to hold the current UI state (Idle, Loading, Error, PermissionAction).
@@ -118,10 +120,10 @@ class BarcodeScanningViewModel @Inject constructor(
     fun toggleCameraActive() {
         if (hasCameraPermission.value) {
             _isCameraActive.value = !_isCameraActive.value
-            // Clear live analysis results when pausing, keep static ones
-            if (!_isCameraActive.value) {
-                _barcodeResults.value = _barcodeResults.value.filter { it.imageUri != null }
-            }
+//            // Clear live analysis results when pausing, keep static ones
+//            if (!_isCameraActive.value) {
+//                _barcodeResults.value = _barcodeResults.value.filter { it.imageUri != null }
+//            }
         } else {
             _uiState.value = UiState.Error("Camera permission is required to toggle camera active state.")
         }
@@ -129,5 +131,20 @@ class BarcodeScanningViewModel @Inject constructor(
 
     fun resetUiState() {
         _uiState.value = UiState.Idle
+    }
+
+    fun saveCurrentResults() {
+        viewModelScope.launch {
+            // Convert ScannedBarcode list to ResultCardModel list using the extension function
+            val resultCardsToSave = _barcodeResults.value.toResultCards()
+            if (resultCardsToSave.isNotEmpty()) {
+                resultCardsToSave.forEach { resultCard ->
+                    roomRepository.saveResultCard(resultCard)
+                }
+                _uiState.value = UiState.Idle // Indicate successful save
+            } else {
+                _uiState.value = UiState.Error("Nothing to save.")
+            }
+        }
     }
 }
