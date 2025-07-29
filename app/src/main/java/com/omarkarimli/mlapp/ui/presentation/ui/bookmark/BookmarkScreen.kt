@@ -6,13 +6,14 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Search
@@ -52,6 +53,9 @@ import androidx.navigation.NavHostController
 import androidx.paging.LoadState
 import androidx.paging.compose.LazyPagingItems
 import androidx.paging.compose.collectAsLazyPagingItems
+// No longer need import androidx.paging.compose.items if it's causing issues
+// We will use the standard LazyColumn items(count: Int) and manually access items
+
 import com.omarkarimli.mlapp.domain.models.ResultCardModel
 import com.omarkarimli.mlapp.ui.navigation.Screen
 import com.omarkarimli.mlapp.ui.presentation.ui.common.widget.ResultCard
@@ -74,8 +78,8 @@ fun BookmarkScreen(navController: NavHostController) {
         topBar = {
             MyTopAppBar(
                 scrollBehavior = scrollBehavior,
-                savedResults = savedResults,
-                onClearAllClicked = { showClearAllDialog = true }
+                // Only enable clear all if there are items to clear
+                onClearAllClicked = { if (savedResults.itemCount > 0) showClearAllDialog = true }
             )
         }
     ) { innerPadding ->
@@ -116,7 +120,7 @@ fun BookmarkScreen(navController: NavHostController) {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun MyTopAppBar(scrollBehavior: TopAppBarScrollBehavior, savedResults: LazyPagingItems<ResultCardModel>, onClearAllClicked: () -> Unit) {
+private fun MyTopAppBar(scrollBehavior: TopAppBarScrollBehavior, onClearAllClicked: () -> Unit) {
     val isTopAppBarMinimized = scrollBehavior.state.collapsedFraction > 0.5
     MediumTopAppBar(
         scrollBehavior = scrollBehavior,
@@ -137,9 +141,7 @@ private fun MyTopAppBar(scrollBehavior: TopAppBarScrollBehavior, savedResults: L
         },
         actions = {
             FilledTonalIconButton(
-                onClick = {
-                    if (savedResults.itemCount > 0) onClearAllClicked()
-                },
+                onClick = onClearAllClicked, // Use the provided lambda directly
                 modifier = Modifier
                     .width(Dimens.IconSizeExtraLarge)
                     .height(Dimens.IconSizeLarge),
@@ -170,6 +172,7 @@ private fun ScrollContent(
                 bottom = innerPadding.calculateBottomPadding()
             )
             .fillMaxWidth()
+            .fillMaxHeight() // crucial for LazyColumn to scroll and paginate!
     ) {
         Spacer(modifier = Modifier.height(Dimens.SpacerExtraLarge))
         // Search
@@ -202,17 +205,24 @@ private fun ScrollContent(
         LazyColumn(
             modifier = Modifier
                 .fillMaxWidth()
-                .weight(1f),
+                .weight(1f), // This will now correctly take the remaining height within the fillMaxHeight Column
             verticalArrangement = Arrangement.spacedBy(Dimens.PaddingSmall),
             contentPadding = PaddingValues(horizontal = Dimens.PaddingLarge)
         ) {
+            // Using items(count: Int) and manually accessing items from LazyPagingItems
             items(
-                items = savedResults.itemSnapshotList.items,
-                key = { result ->
-                    result.id
+                count = savedResults.itemCount, // Use itemCount for the total number of items
+                key = { index ->
+                    // Provide a unique key. It's crucial for performance and state preservation.
+                    // Use the item's ID if available, otherwise fall back to index (less ideal).
+                    savedResults.peek(index)?.id ?: index
                 }
-            ) { result ->
-                ResultCard(result)
+            ) { index ->
+                val result = savedResults[index] // Access item by index
+
+                result?.let { // Handle potential nulls if placeholders are enabled
+                    ResultCard(it)
+                }
             }
 
             // Handle loading states from Paging 3
@@ -221,7 +231,7 @@ private fun ScrollContent(
                     loadState.refresh is LoadState.Loading -> {
                         item {
                             Column(
-                                modifier = Modifier.fillParentMaxSize(), // fills parent size
+                                modifier = Modifier.fillParentMaxSize(), // fills parent size of LazyColumn
                                 verticalArrangement = Arrangement.Center,
                                 horizontalAlignment = Alignment.CenterHorizontally // centers horizontally
                             ) {
@@ -235,7 +245,7 @@ private fun ScrollContent(
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .padding(16.dp)
-                                    .align(Alignment.CenterHorizontally)
+                                    .wrapContentWidth(Alignment.CenterHorizontally) // Center horizontally in its own item
                             )
                         }
                     }
@@ -246,27 +256,36 @@ private fun ScrollContent(
                             Text(
                                 text = "Error: ${error?.localizedMessage ?: "Unknown error"}",
                                 color = MaterialTheme.colorScheme.error,
-                                modifier = Modifier.padding(vertical = Dimens.PaddingMedium)
+                                modifier = Modifier
+                                    .fillMaxWidth() // Fill width
+                                    .padding(vertical = Dimens.PaddingMedium)
+                                    .wrapContentWidth(Alignment.CenterHorizontally) // Center horizontally
                             )
                         }
                     }
                     // Handle empty states based on loaded items and search query
                     itemCount == 0 && loadState.refresh is LoadState.NotLoading -> {
                         item {
-                            if (searchQuery.isNotBlank()) {
-                                Text(
-                                    text = "No items matching \"$searchQuery\"",
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    modifier = Modifier.padding(vertical = Dimens.PaddingMedium)
-                                )
-                            } else {
-                                Text(
-                                    text = "No saved items found",
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    modifier = Modifier.padding(vertical = Dimens.PaddingMedium)
-                                )
+                            Column(
+                                modifier = Modifier.fillParentMaxSize(), // fills parent size of LazyColumn
+                                verticalArrangement = Arrangement.Center,
+                                horizontalAlignment = Alignment.CenterHorizontally
+                            ) {
+                                if (searchQuery.isNotBlank()) {
+                                    Text(
+                                        text = "No items matching \"$searchQuery\"",
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        modifier = Modifier.padding(vertical = Dimens.PaddingMedium)
+                                    )
+                                } else {
+                                    Text(
+                                        text = "No saved items found",
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        modifier = Modifier.padding(vertical = Dimens.PaddingMedium)
+                                    )
+                                }
                             }
                         }
                     }
