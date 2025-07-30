@@ -16,11 +16,32 @@ import com.omarkarimli.mlapp.utils.Dimens
 
 @Composable
 fun ResultCard(resultCardModel: ResultCardModel) {
-    Row(modifier = Modifier.fillMaxWidth().padding(horizontal = Dimens.PaddingExtraSmall, vertical = Dimens.PaddingMedium), verticalAlignment = Alignment.CenterVertically) {
-        Column(modifier = Modifier.weight(1f).padding(end = Dimens.PaddingMedium)) {
-            Text(resultCardModel.subtitle, style = MaterialTheme.typography.bodyMedium, color = Color.Gray, maxLines = 1, overflow = TextOverflow.Ellipsis)
-            Text(resultCardModel.title, style = MaterialTheme.typography.bodyLarge, maxLines = 1, overflow = TextOverflow.Ellipsis)
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = Dimens.PaddingExtraSmall, vertical = Dimens.PaddingMedium),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Column(
+            modifier = Modifier
+                .weight(1f)
+                .padding(end = Dimens.PaddingMedium)
+        ) {
+            Text(
+                resultCardModel.subtitle,
+                style = MaterialTheme.typography.bodyMedium,
+                color = Color.Gray,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+            Text(
+                resultCardModel.title,
+                style = MaterialTheme.typography.bodyLarge,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
         }
+
         DetectedActionImage(resultCardModel.imageUri)
     }
 }

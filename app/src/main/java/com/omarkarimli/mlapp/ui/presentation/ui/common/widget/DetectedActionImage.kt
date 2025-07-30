@@ -36,7 +36,7 @@ fun DetectedActionImage(imageUri: Uri?) {
     var showFullscreenImage by remember { mutableStateOf(false) }
 
     // ONLY render the AsyncImage and its associated logic if imageUri is NOT null
-    if (imageUri != null) {
+    if (imageUri != null && imageUri.toString().isNotEmpty()) {
         AsyncImage(
             model = ImageRequest.Builder(context)
                 .data(imageUri)
