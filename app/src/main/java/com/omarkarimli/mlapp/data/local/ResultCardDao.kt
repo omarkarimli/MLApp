@@ -13,6 +13,9 @@ interface ResultCardDao {
     @Insert(onConflict = OnConflictStrategy.Companion.REPLACE)
     suspend fun insertResultCard(resultCard: ResultCardModel)
 
+    @Query("DELETE FROM scanned_results WHERE id = :id")
+    suspend fun deleteResultCard(id: Int)
+
     @Query("SELECT * FROM scanned_results WHERE title LIKE '%' || :searchQuery || '%' OR subtitle LIKE '%' || :searchQuery || '%' ORDER BY id DESC")
     fun getPaginatedResultCardsPagingSource(searchQuery: String): PagingSource<Int, ResultCardModel>
 

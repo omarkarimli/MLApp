@@ -19,7 +19,6 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilledTonalIconButton
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
@@ -48,7 +47,7 @@ import androidx.paging.compose.LazyPagingItems
 import androidx.paging.compose.collectAsLazyPagingItems
 import com.omarkarimli.mlapp.domain.models.ResultCardModel
 import com.omarkarimli.mlapp.ui.navigation.Screen
-import com.omarkarimli.mlapp.ui.presentation.common.widget.ResultCard
+import com.omarkarimli.mlapp.ui.presentation.common.widget.SwipeableResultCard
 import com.omarkarimli.mlapp.ui.presentation.common.widget.SearchLayout
 import com.omarkarimli.mlapp.utils.Dimens
 
@@ -79,7 +78,7 @@ fun BookmarkScreen() {
             innerPadding = innerPadding,
             savedResults = savedResults,
             searchQuery = searchQuery,
-            onSearchQueryChanged = viewModel::setSearchQuery
+            viewModel = viewModel
         )
     }
 
@@ -154,7 +153,7 @@ private fun ScrollContent(
     innerPadding: PaddingValues,
     savedResults: LazyPagingItems<ResultCardModel>,
     searchQuery: String,
-    onSearchQueryChanged: (String) -> Unit
+    viewModel: BookmarkViewModel
 ) {
     Column(
         modifier = Modifier
@@ -165,14 +164,13 @@ private fun ScrollContent(
             .fillMaxWidth()
     ) {
         Spacer(modifier = Modifier.height(Dimens.SpacerExtraLarge))
-        SearchLayout(searchQuery, onSearchQueryChanged)
+        SearchLayout(searchQuery) { viewModel.setSearchQuery(searchQuery) }
         Spacer(modifier = Modifier.height(Dimens.SpacerMedium))
 
         LazyColumn(
             modifier = Modifier
                 .fillMaxWidth()
-                .weight(1f), // This will now correctly take the remaining height within the fillMaxHeight Column
-            verticalArrangement = Arrangement.spacedBy(Dimens.PaddingSmall),
+                .weight(1f),
             contentPadding = PaddingValues(horizontal = Dimens.PaddingLarge)
         ) {
             // Using items(count: Int) and manually accessing items from LazyPagingItems
@@ -184,11 +182,9 @@ private fun ScrollContent(
                     savedResults.peek(index)?.id ?: index
                 }
             ) { index ->
-                val result = savedResults[index] // Access item by index
-
+                val result = savedResults[index]
                 result?.let {
-                    ResultCard(it)
-                    if (index < savedResults.itemCount - 1) HorizontalDivider()
+                    SwipeableResultCard(it, onDelete = { viewModel.deleteSavedResult(it.id) }, onInfo = {})
                 }
             }
 
@@ -240,14 +236,14 @@ private fun ScrollContent(
                             ) {
                                 if (searchQuery.isNotBlank()) {
                                     Text(
-                                        text = "No items matching \"$searchQuery\"",
+                                        text = "No item matching",
                                         style = MaterialTheme.typography.bodyMedium,
                                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                                         modifier = Modifier.padding(vertical = Dimens.PaddingMedium)
                                     )
                                 } else {
                                     Text(
-                                        text = "No saved items found",
+                                        text = "No saved item found",
                                         style = MaterialTheme.typography.bodyMedium,
                                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                                         modifier = Modifier.padding(vertical = Dimens.PaddingMedium)

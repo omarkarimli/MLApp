@@ -5,6 +5,7 @@ import com.omarkarimli.mlapp.domain.models.ResultCardModel
 import kotlinx.coroutines.flow.Flow
 
 interface RoomRepository {
+    suspend fun deleteSavedResult(id: Int)
     suspend fun saveResultCard(resultCard: ResultCardModel)
 
     // Updated signature to include searchQuery

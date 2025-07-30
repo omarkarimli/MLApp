@@ -39,4 +39,8 @@ class RoomRepositoryImpl @Inject constructor(
     override fun getRecentResults(limit: Int): Flow<List<ResultCardModel>> {
         return resultCardDao.getRecentResults(limit)
     }
+
+    override suspend fun deleteSavedResult(id: Int) {
+        resultCardDao.deleteResultCard(id)
+    }
 }

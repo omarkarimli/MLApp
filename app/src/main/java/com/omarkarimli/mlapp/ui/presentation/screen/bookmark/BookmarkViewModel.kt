@@ -50,4 +50,10 @@ class BookmarkViewModel @Inject constructor(
             roomRepository.clearAllSavedResults()
         }
     }
+
+    fun deleteSavedResult(id: Int) {
+        viewModelScope.launch {
+            roomRepository.deleteSavedResult(id)
+        }
+    }
 }

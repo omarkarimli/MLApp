@@ -19,6 +19,9 @@ object Dimens {
     const val textAnimationDurationMillis: Int = 1200 // Duration for text slide and fade
     const val toastEntryExitDurationMillis: Int = 800 // Duration for toast slide-in/out
 
+    // Swipe to Reveal
+    val RevealedWidth = 128.dp
+
     // Elevation
     val ElevationMedium = 3.dp
 

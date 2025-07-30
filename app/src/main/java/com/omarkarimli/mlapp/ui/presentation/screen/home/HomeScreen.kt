@@ -34,7 +34,6 @@ import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilledIconButton
 import androidx.compose.material3.FilledTonalIconButton
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
@@ -67,7 +66,7 @@ import com.omarkarimli.mlapp.utils.Dimens
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.omarkarimli.mlapp.domain.models.ResultCardModel
 import com.omarkarimli.mlapp.ui.navigation.LocalNavController
-import com.omarkarimli.mlapp.ui.presentation.common.widget.ResultCard
+import com.omarkarimli.mlapp.ui.presentation.common.widget.OriginalResultCard
 import com.omarkarimli.mlapp.ui.presentation.common.widget.SearchLayout
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -298,15 +297,15 @@ private fun ScrollContent(
 
             item {
                 Spacer(modifier = Modifier.height(Dimens.PaddingLarge))
-                RecentlySaved(filteredSavedResults) // Pass filteredSavedResults
-                Spacer(modifier = Modifier.height(Dimens.PaddingLarge)) // Add some space at the bottom
+                RecentlySaved(filteredSavedResults)
+                Spacer(modifier = Modifier.height(Dimens.PaddingLarge))
             }
         }
     }
 }
 
 @Composable
-private fun RecentlySaved(savedResults: List<ResultCardModel>) {
+private fun RecentlySaved(filteredSavedResults: List<ResultCardModel>) {
     Column(
         modifier = Modifier
             .fillMaxWidth(), // Removed horizontal padding from here, now applied to LazyColumn contentPadding
@@ -319,7 +318,7 @@ private fun RecentlySaved(savedResults: List<ResultCardModel>) {
             modifier = Modifier.padding(bottom = Dimens.PaddingSmall) // Add bottom padding for the title
         )
 
-        if (savedResults.isEmpty()) {
+        if (filteredSavedResults.isEmpty()) {
             Text(
                 text = "No saved item found",
                 style = MaterialTheme.typography.bodyMedium,
@@ -331,9 +330,8 @@ private fun RecentlySaved(savedResults: List<ResultCardModel>) {
                 modifier = Modifier.fillMaxWidth(),
                 verticalArrangement = Arrangement.spacedBy(Dimens.PaddingExtraSmall) // Spacing between result cards
             ) {
-                savedResults.forEachIndexed { index, resultCard ->
-                    ResultCard(resultCard)
-                    if (index < savedResults.lastIndex) HorizontalDivider()
+                filteredSavedResults.forEachIndexed { index, resultCard ->
+                    OriginalResultCard(resultCard)
                 }
             }
         }

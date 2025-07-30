@@ -13,10 +13,9 @@ import javax.inject.Inject
 
 @HiltViewModel
 class HomeViewModel @Inject constructor(
-    roomRepository: RoomRepository
+    val roomRepository: RoomRepository
 ) : ViewModel() {
 
-    // Expose the Flow of saved results as a StateFlow to be observed by the UI
     val savedResults: StateFlow<List<ResultCardModel>> =
         roomRepository.getRecentResults(Constants.RECENT_SAVED_COUNT)
             .stateIn(
