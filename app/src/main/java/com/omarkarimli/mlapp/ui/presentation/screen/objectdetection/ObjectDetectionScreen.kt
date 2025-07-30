@@ -23,7 +23,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
-import androidx.navigation.NavHostController
 import com.google.mlkit.vision.common.InputImage
 import com.omarkarimli.mlapp.ui.navigation.Screen
 import com.omarkarimli.mlapp.ui.presentation.common.widget.CameraPermissionPlaceholder
@@ -33,6 +32,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.omarkarimli.mlapp.ui.navigation.LocalNavController
 import com.omarkarimli.mlapp.utils.toResultCards
 import com.omarkarimli.mlapp.ui.presentation.common.widget.BottomSheetContent
 import com.omarkarimli.mlapp.ui.presentation.common.widget.CameraPreview
@@ -44,13 +44,14 @@ import com.omarkarimli.mlapp.utils.showToast
 @Composable
 fun ObjectDetectionScreenPreview() {
     MLAppTheme {
-        ObjectDetectionScreen(navController = NavHostController(LocalContext.current))
+        ObjectDetectionScreen()
     }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun ObjectDetectionScreen(navController: NavHostController) {
+fun ObjectDetectionScreen() {
+    val navController = LocalNavController.current
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
 

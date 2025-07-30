@@ -14,10 +14,13 @@ import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.navigation.NavGraph.Companion.findStartDestination
+import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
@@ -52,16 +55,17 @@ val bottomBarDestinations = listOf(
     BottomBarDestination.Settings
 )
 
+val LocalNavController = staticCompositionLocalOf<NavHostController> {
+    error("No NavController provided")
+}
+
 @Composable
 fun AppNavigation() {
-    // Create a NavController to manage navigation state
     val navController = rememberNavController()
 
-    // Determine the currently selected bottom navigation item
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route
 
-    // Scaffold provides the basic visual structure for Material Design components
     Scaffold(
         bottomBar = {
             // Conditionally show the NavigationBar based on the current route
@@ -99,57 +103,47 @@ fun AppNavigation() {
             }
         }
     ) { paddingValues ->
-        // NavHost defines the navigation graph and manages screen content
-        NavHost(
-            navController = navController,
-            startDestination = Screen.Splash.route,
-            modifier = Modifier.padding(
-                bottom = paddingValues.calculateBottomPadding()
-            ) // Apply padding from Scaffold
-        ) {
-            // Composable for the Splash screen
-            composable(Screen.Splash.route) {
-                SplashScreen(navController = navController)
-            }
-            // Composable for the Onboarding screen
-            composable(Screen.Onboarding.route) {
-                OnboardingScreen(navController = navController)
-            }
-            // Composable for the Login screen
-            composable(Screen.Login.route) {
-                LoginScreen(navController = navController)
-            }
-            // Composable for the Home screen
-            composable(Screen.Home.route) {
-                HomeScreen(navController = navController)
-            }
-            // Composable for the Bookmarks screen
-            composable(Screen.Bookmarks.route) {
-                BookmarkScreen(navController = navController)
-            }
-            // Composable for the Settings screen
-            composable(Screen.Settings.route) {
-                SettingsScreen(navController = navController)
-            }
-            // Composable for the Barcode Scanning screen
-            composable(Screen.BarcodeScanning.route) {
-                BarcodeScanningScreen(navController = navController)
-            }
-            // Composable for the Image Labeling screen
-            composable(Screen.ImageLabeling.route) {
-                ImageLabelingScreen(navController = navController)
-            }
-            // Composable for the Text Recognition screen
-            composable(Screen.TextRecognition.route) {
-                TextRecognitionScreen(navController = navController)
-            }
-            // Composable for the Object Detection screen
-            composable(Screen.ObjectDetection.route) {
-                ObjectDetectionScreen(navController = navController)
-            }
-            // Composable for the Face Mesh Detection screen
-            composable(Screen.FaceMeshDetection.route) {
-                FaceMeshDetectionScreen(navController = navController)
+        CompositionLocalProvider(LocalNavController provides navController) {
+            NavHost(
+                navController = navController,
+                startDestination = Screen.Splash.route,
+                modifier = Modifier.padding(
+                    bottom = paddingValues.calculateBottomPadding()
+                )
+            ) {
+                composable(Screen.Splash.route) {
+                    SplashScreen()
+                }
+                composable(Screen.Onboarding.route) {
+                    OnboardingScreen()
+                }
+                composable(Screen.Login.route) {
+                    LoginScreen()
+                }
+                composable(Screen.Home.route) {
+                    HomeScreen()
+                }
+                composable(Screen.Bookmarks.route) {
+                    BookmarkScreen()
+                }
+                composable(Screen.Settings.route) {
+                    SettingsScreen()
+                }
+                composable(Screen.BarcodeScanning.route) {
+                    BarcodeScanningScreen()
+                }
+                composable(Screen.ImageLabeling.route) {
+                    ImageLabelingScreen()
+                }
+                composable(Screen.TextRecognition.route) {
+                    TextRecognitionScreen()
+                }
+                composable(Screen.ObjectDetection.route) {
+                    ObjectDetectionScreen()
+                }
+                composable(Screen.FaceMeshDetection.route) {
+                    FaceMeshDetectionScreen()
+                }
             }
         }
     }

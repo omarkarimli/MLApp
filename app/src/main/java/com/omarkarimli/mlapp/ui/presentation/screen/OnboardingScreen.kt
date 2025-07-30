@@ -34,7 +34,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -42,6 +41,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.navigation.NavHostController
 import com.omarkarimli.mlapp.R
+import com.omarkarimli.mlapp.ui.navigation.LocalNavController
 import com.omarkarimli.mlapp.ui.theme.MLAppTheme
 import com.omarkarimli.mlapp.ui.navigation.Screen
 import com.omarkarimli.mlapp.utils.Dimens
@@ -49,10 +49,9 @@ import kotlinx.coroutines.launch
 import java.util.Locale
 
 @Composable
-fun OnboardingScreen(navController: NavHostController) {
-
+fun OnboardingScreen() {
     Scaffold { innerPadding ->
-        ScrollContent(innerPadding, navController)
+        ScrollContent(innerPadding)
     }
 }
 
@@ -60,15 +59,16 @@ fun OnboardingScreen(navController: NavHostController) {
 @Composable
 fun OnboardingPreview() {
     MLAppTheme {
-        OnboardingScreen(navController = NavHostController(LocalContext.current))
+        OnboardingScreen()
     }
 }
 
 @Composable
 private fun ScrollContent(
-    innerPadding: PaddingValues,
-    navController: NavHostController
+    innerPadding: PaddingValues
 ) {
+    val navController = LocalNavController.current
+
     val onboardingPages = listOf(
         OnboardingPageData(R.drawable.onboarding_image_1, "Welcome to ${stringResource(id = R.string.app_name)}!", "Share and collaborate with friends and family."),
         OnboardingPageData(R.drawable.onboarding_image_2, "Collaborate with ease.", "Easily share, collab with friends & family."),

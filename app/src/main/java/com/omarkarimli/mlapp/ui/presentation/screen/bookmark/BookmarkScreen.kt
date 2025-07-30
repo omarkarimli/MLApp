@@ -43,13 +43,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
-import androidx.navigation.NavHostController
 import androidx.paging.LoadState
 import androidx.paging.compose.LazyPagingItems
 import androidx.paging.compose.collectAsLazyPagingItems
-// No longer need import androidx.paging.compose.items if it's causing issues
-// We will use the standard LazyColumn items(count: Int) and manually access items
-
 import com.omarkarimli.mlapp.domain.models.ResultCardModel
 import com.omarkarimli.mlapp.ui.navigation.Screen
 import com.omarkarimli.mlapp.ui.presentation.common.widget.ResultCard
@@ -58,7 +54,7 @@ import com.omarkarimli.mlapp.utils.Dimens
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun BookmarkScreen(navController: NavHostController) {
+fun BookmarkScreen() {
     val scrollBehavior = TopAppBarDefaults.enterAlwaysScrollBehavior(rememberTopAppBarState())
 
     val viewModel: BookmarkViewModel = hiltViewModel()
@@ -136,7 +132,7 @@ private fun MyTopAppBar(scrollBehavior: TopAppBarScrollBehavior, onClearAllClick
         },
         actions = {
             FilledTonalIconButton(
-                onClick = onClearAllClicked, // Use the provided lambda directly
+                onClick = onClearAllClicked,
                 modifier = Modifier
                     .width(Dimens.IconSizeExtraLarge)
                     .height(Dimens.IconSizeLarge),

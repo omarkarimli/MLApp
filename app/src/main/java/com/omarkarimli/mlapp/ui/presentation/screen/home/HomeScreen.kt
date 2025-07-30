@@ -53,13 +53,11 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.nestedscroll.nestedScroll
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
-import androidx.navigation.NavHostController
 import com.omarkarimli.mlapp.R
 import com.omarkarimli.mlapp.domain.models.ListItemModel
 import com.omarkarimli.mlapp.ui.navigation.Screen
@@ -68,12 +66,14 @@ import com.omarkarimli.mlapp.ui.theme.MLAppTheme
 import com.omarkarimli.mlapp.utils.Dimens
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.omarkarimli.mlapp.domain.models.ResultCardModel
+import com.omarkarimli.mlapp.ui.navigation.LocalNavController
 import com.omarkarimli.mlapp.ui.presentation.common.widget.ResultCard
 import com.omarkarimli.mlapp.ui.presentation.common.widget.SearchLayout
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun HomeScreen(navController: NavHostController) {
+fun HomeScreen() {
+    val navController = LocalNavController.current
     val scrollBehavior = TopAppBarDefaults.enterAlwaysScrollBehavior(rememberTopAppBarState())
 
     val viewModel: HomeViewModel = hiltViewModel()
@@ -129,7 +129,7 @@ fun HomeScreen(navController: NavHostController) {
             MyTopAppBar(scrollBehavior, items)
         }
     ) { innerPadding ->
-        ScrollContent(innerPadding, navController, items, savedResults) // Pass savedResults
+        ScrollContent(innerPadding, items, savedResults) // Pass savedResults
     }
 }
 
@@ -248,7 +248,6 @@ private fun MyTopAppBar(scrollBehavior: TopAppBarScrollBehavior, items: List<Lis
 @Composable
 private fun ScrollContent(
     innerPadding: PaddingValues,
-    navController: NavHostController,
     items: List<ListItemModel>,
     savedResults: List<ResultCardModel>
 ) {
@@ -349,7 +348,6 @@ fun HomePreview() {
             MyTopAppBar(scrollBehavior = TopAppBarDefaults.enterAlwaysScrollBehavior(rememberTopAppBarState()), items = emptyList())
             ScrollContent(
                 innerPadding = PaddingValues(),
-                navController = NavHostController(LocalContext.current),
                 items = listOf(
                     ListItemModel("1", Icons.Rounded.TextFields, "Text", "Desc", Icons.AutoMirrored.Rounded.ArrowForward, onClick = {}),
                     ListItemModel("2", Icons.Rounded.Face, "Face", "Desc", Icons.AutoMirrored.Rounded.ArrowForward, onClick = {})

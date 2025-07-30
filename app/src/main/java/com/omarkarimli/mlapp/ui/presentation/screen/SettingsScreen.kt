@@ -37,22 +37,22 @@ import androidx.compose.material3.rememberTopAppBarState
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.navigation.NavHostController
 import com.omarkarimli.mlapp.domain.models.ListItemModel
 import com.omarkarimli.mlapp.ui.presentation.common.widget.ListItemUi
 import com.omarkarimli.mlapp.utils.Dimens
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun SettingsScreen(navController: NavHostController) {
+fun SettingsScreen() {
     val scrollBehavior = TopAppBarDefaults.enterAlwaysScrollBehavior(rememberTopAppBarState())
+
     Scaffold(
         modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
         topBar = {
             MyTopAppBar(scrollBehavior)
         }
     ) { innerPadding ->
-        ScrollContent(innerPadding, navController)
+        ScrollContent(innerPadding)
     }
 }
 
@@ -114,8 +114,7 @@ private fun MyTopAppBar(scrollBehavior: TopAppBarScrollBehavior) {
 
 @Composable
 private fun ScrollContent(
-    innerPadding: PaddingValues,
-    navController: NavHostController
+    innerPadding: PaddingValues
 ) {
     // Sample data for your list
     val items = listOf(

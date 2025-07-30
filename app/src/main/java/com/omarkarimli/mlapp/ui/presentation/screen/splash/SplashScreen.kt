@@ -12,7 +12,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLayoutDirection
-import androidx.navigation.NavHostController
 import com.omarkarimli.mlapp.ui.navigation.Screen
 import com.omarkarimli.mlapp.R
 import com.omarkarimli.mlapp.utils.Dimens
@@ -20,9 +19,11 @@ import com.omarkarimli.mlapp.utils.Dimens
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.omarkarimli.mlapp.ui.navigation.LocalNavController
 
 @Composable
-fun SplashScreen(navController: NavHostController) {
+fun SplashScreen() {
+    val navController = LocalNavController.current
     val viewModel: SplashViewModel = hiltViewModel()
 
     val context = LocalContext.current

@@ -15,24 +15,25 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue // Import this
-import androidx.compose.runtime.mutableStateOf // Import this
-import androidx.compose.runtime.remember // Import this
-import androidx.compose.runtime.setValue // Import this
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.navigation.NavHostController
+import com.omarkarimli.mlapp.ui.navigation.LocalNavController
 import com.omarkarimli.mlapp.ui.navigation.Screen
 import com.omarkarimli.mlapp.ui.presentation.common.widget.WeightedImageDisplay
 import com.omarkarimli.mlapp.ui.theme.MLAppTheme
 import com.omarkarimli.mlapp.utils.Dimens
 
 @Composable
-fun LoginScreen(navController: NavHostController) {
+fun LoginScreen() {
+    val navController = LocalNavController.current
     // State for the Bio TextField
     var bioText by remember { mutableStateOf("") }
     // State for the Website TextField
@@ -121,6 +122,6 @@ fun onLoginClick(navController: NavHostController) {
 @Composable
 fun LoginPreview() {
     MLAppTheme {
-        LoginScreen(navController = NavHostController(LocalContext.current))
+        LoginScreen()
     }
 }
