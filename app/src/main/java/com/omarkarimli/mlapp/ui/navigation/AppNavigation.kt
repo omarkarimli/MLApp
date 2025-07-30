@@ -22,23 +22,22 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
-import com.omarkarimli.mlapp.ui.presentation.ui.facemeshdetection.FaceMeshDetectionScreen
-import com.omarkarimli.mlapp.ui.presentation.ui.bookmark.BookmarkScreen
-import com.omarkarimli.mlapp.ui.presentation.ui.home.HomeScreen
-import com.omarkarimli.mlapp.ui.presentation.ui.imagelabeling.ImageLabelingScreen
-import com.omarkarimli.mlapp.ui.presentation.ui.LoginScreen
-import com.omarkarimli.mlapp.ui.presentation.ui.objectdetection.ObjectDetectionScreen
-import com.omarkarimli.mlapp.ui.presentation.ui.OnboardingScreen
-import com.omarkarimli.mlapp.ui.presentation.ui.SettingsScreen
-import com.omarkarimli.mlapp.ui.presentation.ui.splash.SplashScreen
-import com.omarkarimli.mlapp.ui.presentation.ui.barcodescanning.BarcodeScanningScreen
-import com.omarkarimli.mlapp.ui.presentation.ui.textrecognition.TextRecognitionScreen
+import com.omarkarimli.mlapp.ui.presentation.screen.facemeshdetection.FaceMeshDetectionScreen
+import com.omarkarimli.mlapp.ui.presentation.screen.bookmark.BookmarkScreen
+import com.omarkarimli.mlapp.ui.presentation.screen.home.HomeScreen
+import com.omarkarimli.mlapp.ui.presentation.screen.imagelabeling.ImageLabelingScreen
+import com.omarkarimli.mlapp.ui.presentation.screen.LoginScreen
+import com.omarkarimli.mlapp.ui.presentation.screen.objectdetection.ObjectDetectionScreen
+import com.omarkarimli.mlapp.ui.presentation.screen.OnboardingScreen
+import com.omarkarimli.mlapp.ui.presentation.screen.SettingsScreen
+import com.omarkarimli.mlapp.ui.presentation.screen.splash.SplashScreen
+import com.omarkarimli.mlapp.ui.presentation.screen.barcodescanning.BarcodeScanningScreen
+import com.omarkarimli.mlapp.ui.presentation.screen.textrecognition.TextRecognitionScreen
 
-// Define a sealed class for bottom navigation destinations
 sealed class BottomBarDestination(
     val route: String,
-    val selectedIcon: ImageVector, // Icon when selected (rounded)
-    val unselectedIcon: ImageVector, // Icon when not selected (outlined)
+    val selectedIcon: ImageVector,
+    val unselectedIcon: ImageVector,
     val label: String,
     val contentDescription: String
 ) {
@@ -77,19 +76,14 @@ fun AppNavigation() {
                         NavigationBarItem(
                             selected = isSelected,
                             onClick = {
-                                // Navigate to the selected destination, handling back stack
-                                navController.navigate(destination.route) {
-                                    // Pop up to the start destination of the graph to
-                                    // avoid building up a large stack of destinations
-                                    // on the back stack as users select items
-                                    popUpTo(navController.graph.findStartDestination().id) {
-                                        saveState = true
+                                if (!isSelected) {
+                                    navController.navigate(destination.route) {
+                                        popUpTo(navController.graph.findStartDestination().id) {
+                                            saveState = true
+                                        }
+                                        launchSingleTop = true
+                                        restoreState = true
                                     }
-                                    // Avoid multiple copies of the same destination when
-                                    // reselecting the same item
-                                    launchSingleTop = true
-                                    // Restore state when reselecting a previously selected item
-                                    restoreState = true
                                 }
                             },
                             icon = {

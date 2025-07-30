@@ -3,7 +3,7 @@ package com.omarkarimli.mlapp.data.repository
 import androidx.paging.Pager
 import androidx.paging.PagingConfig
 import androidx.paging.PagingData
-import com.omarkarimli.mlapp.data.dao.ResultCardDao
+import com.omarkarimli.mlapp.data.local.ResultCardDao
 import com.omarkarimli.mlapp.domain.models.ResultCardModel
 import com.omarkarimli.mlapp.domain.repository.RoomRepository
 import com.omarkarimli.mlapp.utils.Constants
