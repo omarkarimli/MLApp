@@ -37,8 +37,8 @@ import androidx.compose.material3.rememberTopAppBarState
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
-import com.omarkarimli.mlapp.domain.models.ListItemModel
-import com.omarkarimli.mlapp.ui.presentation.common.widget.ListItemUi
+import com.omarkarimli.mlapp.domain.models.StandardListItemModel
+import com.omarkarimli.mlapp.ui.presentation.common.widget.StandardListItemUi
 import com.omarkarimli.mlapp.utils.Dimens
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -118,35 +118,35 @@ private fun ScrollContent(
 ) {
     // Sample data for your list
     val items = listOf(
-        ListItemModel(
+        StandardListItemModel(
             "1",
             Icons.Rounded.Notifications,
             "Notifications",
             "Manage your alerts and sounds.",
             Icons.AutoMirrored.Rounded.ArrowForward
         ),
-        ListItemModel(
+        StandardListItemModel(
             "2",
             Icons.Rounded.DarkMode, // Common icon for theme settings
             "Theme",
             "Change the app's appearance.",
             Icons.AutoMirrored.Rounded.ArrowForward
         ),
-        ListItemModel(
+        StandardListItemModel(
             "3",
             Icons.Rounded.Language, // Standard icon for language settings
             "Language",
             "Select your preferred language.",
             Icons.AutoMirrored.Rounded.ArrowForward
         ),
-        ListItemModel(
+        StandardListItemModel(
             "4",
             Icons.Rounded.SettingsBackupRestore, // Icon suggesting a reset
             "Reset Settings",
             "Revert all settings to their default values.",
             Icons.AutoMirrored.Rounded.ArrowForward
         ),
-        ListItemModel(
+        StandardListItemModel(
             "5",
             Icons.Outlined.Info,
             "About App",
@@ -171,7 +171,7 @@ private fun ScrollContent(
             contentPadding = PaddingValues(horizontal = Dimens.PaddingLarge)
         ) {
             items(items) { item ->
-                ListItemUi(item = item)
+                StandardListItemUi(item = item)
             }
         }
     }

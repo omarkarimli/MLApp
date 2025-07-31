@@ -58,9 +58,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import com.omarkarimli.mlapp.R
-import com.omarkarimli.mlapp.domain.models.ListItemModel
+import com.omarkarimli.mlapp.domain.models.StandardListItemModel
 import com.omarkarimli.mlapp.ui.navigation.Screen
-import com.omarkarimli.mlapp.ui.presentation.common.widget.ListItemUi
+import com.omarkarimli.mlapp.ui.presentation.common.widget.StandardListItemUi
 import com.omarkarimli.mlapp.ui.theme.MLAppTheme
 import com.omarkarimli.mlapp.utils.Dimens
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -80,7 +80,7 @@ fun HomeScreen() {
 
     // Sample data for your list (unchanged)
     val items = listOf(
-        ListItemModel(
+        StandardListItemModel(
             "1",
             Icons.Rounded.TextFields,
             "Text Recognition",
@@ -88,7 +88,7 @@ fun HomeScreen() {
             Icons.AutoMirrored.Rounded.ArrowForward,
             onClick = { navController.navigate(Screen.TextRecognition.route) }
         ),
-        ListItemModel(
+        StandardListItemModel(
             "2",
             Icons.Rounded.Face,
             "Face Mesh Detection",
@@ -96,7 +96,7 @@ fun HomeScreen() {
             Icons.AutoMirrored.Rounded.ArrowForward,
             onClick = { navController.navigate(Screen.FaceMeshDetection.route) }
         ),
-        ListItemModel(
+        StandardListItemModel(
             "3",
             Icons.Rounded.ImageSearch,
             "Image Labeling",
@@ -104,7 +104,7 @@ fun HomeScreen() {
             Icons.AutoMirrored.Rounded.ArrowForward,
             onClick = { navController.navigate(Screen.ImageLabeling.route) }
         ),
-        ListItemModel(
+        StandardListItemModel(
             "4",
             Icons.Rounded.QrCodeScanner,
             "Barcode Scanning",
@@ -112,7 +112,7 @@ fun HomeScreen() {
             Icons.AutoMirrored.Rounded.ArrowForward,
             onClick = { navController.navigate(Screen.BarcodeScanning.route) }
         ),
-        ListItemModel(
+        StandardListItemModel(
             "5",
             Icons.Rounded.CenterFocusStrong,
             "Object Detection",
@@ -134,7 +134,7 @@ fun HomeScreen() {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun MyTopAppBar(scrollBehavior: TopAppBarScrollBehavior, items: List<ListItemModel>) {
+private fun MyTopAppBar(scrollBehavior: TopAppBarScrollBehavior, items: List<StandardListItemModel>) {
     var expanded by remember { mutableStateOf(false) }
     val isTopAppBarMinimized = scrollBehavior.state.collapsedFraction > 0.5 // Adjust threshold as needed
     MediumTopAppBar(
@@ -247,7 +247,7 @@ private fun MyTopAppBar(scrollBehavior: TopAppBarScrollBehavior, items: List<Lis
 @Composable
 private fun ScrollContent(
     innerPadding: PaddingValues,
-    items: List<ListItemModel>,
+    items: List<StandardListItemModel>,
     savedResults: List<ResultCardModel>
 ) {
     var searchText by remember { mutableStateOf("") }
@@ -292,7 +292,7 @@ private fun ScrollContent(
             contentPadding = PaddingValues(horizontal = Dimens.PaddingLarge) // Apply horizontal padding here for list items
         ) {
             items(filteredItems) { item -> // Use filteredItems here
-                ListItemUi(item = item)
+                StandardListItemUi(item = item)
             }
 
             item {
@@ -345,8 +345,8 @@ fun HomePreview() {
             ScrollContent(
                 innerPadding = PaddingValues(),
                 items = listOf(
-                    ListItemModel("1", Icons.Rounded.TextFields, "Text", "Desc", Icons.AutoMirrored.Rounded.ArrowForward, onClick = {}),
-                    ListItemModel("2", Icons.Rounded.Face, "Face", "Desc", Icons.AutoMirrored.Rounded.ArrowForward, onClick = {})
+                    StandardListItemModel("1", Icons.Rounded.TextFields, "Text", "Desc", Icons.AutoMirrored.Rounded.ArrowForward, onClick = {}),
+                    StandardListItemModel("2", Icons.Rounded.Face, "Face", "Desc", Icons.AutoMirrored.Rounded.ArrowForward, onClick = {})
                 ),
                 savedResults = listOf(
                     ResultCardModel(id = 1, title = "Saved Barcode 1", subtitle = "EAN-13", imageUri = null),

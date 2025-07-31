@@ -22,12 +22,12 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import com.omarkarimli.mlapp.domain.models.ListItemModel
+import com.omarkarimli.mlapp.domain.models.StandardListItemModel
 import com.omarkarimli.mlapp.utils.Dimens
 
 @Composable
-fun ListItemUi(
-    item: ListItemModel
+fun StandardListItemUi(
+    item: StandardListItemModel
 ) {
     Card(
         modifier = Modifier
