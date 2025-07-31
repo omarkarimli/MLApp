@@ -1,4 +1,4 @@
-package com.omarkarimli.mlapp.ui.presentation.screen
+package com.omarkarimli.mlapp.ui.presentation.screen.onboarding
 
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.tween

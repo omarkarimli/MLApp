@@ -1,4 +1,4 @@
-package com.omarkarimli.mlapp.ui.presentation.screen
+package com.omarkarimli.mlapp.ui.presentation.screen.settings
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column

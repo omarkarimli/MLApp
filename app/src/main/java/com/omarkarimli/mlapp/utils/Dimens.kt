@@ -86,7 +86,7 @@ object Dimens {
 
     // Indicator
     val IndicatorWidth = 4.dp
-    val IndicatorHeight = 42.dp
+    val IndicatorHeight = 40.dp
 
     const val FixedFaceMeshScaleFactor = 1.25f
 

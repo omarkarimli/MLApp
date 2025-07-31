@@ -31,8 +31,8 @@ import com.omarkarimli.mlapp.ui.presentation.screen.home.HomeScreen
 import com.omarkarimli.mlapp.ui.presentation.screen.imagelabeling.ImageLabelingScreen
 import com.omarkarimli.mlapp.ui.presentation.screen.login.LoginScreen
 import com.omarkarimli.mlapp.ui.presentation.screen.objectdetection.ObjectDetectionScreen
-import com.omarkarimli.mlapp.ui.presentation.screen.OnboardingScreen
-import com.omarkarimli.mlapp.ui.presentation.screen.SettingsScreen
+import com.omarkarimli.mlapp.ui.presentation.screen.onboarding.OnboardingScreen
+import com.omarkarimli.mlapp.ui.presentation.screen.settings.SettingsScreen
 import com.omarkarimli.mlapp.ui.presentation.screen.splash.SplashScreen
 import com.omarkarimli.mlapp.ui.presentation.screen.barcodescanning.BarcodeScanningScreen
 import com.omarkarimli.mlapp.ui.presentation.screen.textrecognition.TextRecognitionScreen
