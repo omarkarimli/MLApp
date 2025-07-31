@@ -31,7 +31,7 @@ class SplashViewModel @Inject constructor(
 
             Log.e("SplashViewModel", "LOGIN KEY: $loginKey")
 
-            _uiState.value = if (loginKey) UiState.Success else UiState.Error("Login failed")
+            _uiState.value = if (loginKey) UiState.Success("Login successful") else UiState.Error("Login failed")
         }
     }
 }

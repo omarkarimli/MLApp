@@ -72,7 +72,7 @@ fun BottomSheetContent(
                 modifier = Modifier
                     .fillMaxWidth()
                     .heightIn(max = Dimens.ListMaxHeight),
-                contentPadding = PaddingValues(vertical = Dimens.PaddingExtraSmall)
+                verticalArrangement = Arrangement.spacedBy(Dimens.PaddingMedium)
             ) {
                 itemsIndexed(resultCards) { index, resultCard ->
                     OriginalResultCard(

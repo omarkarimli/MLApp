@@ -31,7 +31,6 @@ import com.omarkarimli.mlapp.ui.navigation.Screen
 import com.omarkarimli.mlapp.ui.presentation.common.state.UiState
 import com.omarkarimli.mlapp.ui.presentation.common.widget.MyTextField
 import com.omarkarimli.mlapp.ui.presentation.common.widget.WeightedImageDisplay
-import com.omarkarimli.mlapp.ui.presentation.screen.login.LoginViewModel
 import com.omarkarimli.mlapp.utils.Dimens
 import com.omarkarimli.mlapp.utils.showToast
 
@@ -54,7 +53,11 @@ fun LoginScreen() {
                     popUpTo(Screen.Login.route) { inclusive = true }
                 }
 
-                context.showToast("Login successful")
+                val successMessage = (uiState as UiState.Success).message
+                context.showToast(successMessage)
+                Log.e("LoginScreen", "Success: $successMessage")
+
+                viewModel.resetUiState()
             }
             is UiState.Error -> {
                 val errorMessage = (uiState as UiState.Error).message

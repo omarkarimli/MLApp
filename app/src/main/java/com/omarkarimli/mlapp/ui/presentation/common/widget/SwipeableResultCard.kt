@@ -3,6 +3,7 @@ package com.omarkarimli.mlapp.ui.presentation.common.widget
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -58,7 +59,10 @@ fun SwipeToRevealBox(
         modifier = modifier
             .fillMaxWidth()
             .height(IntrinsicSize.Min)
-            .clip(RoundedCornerShape(Dimens.CornerRadiusLarge))
+            .clip(RoundedCornerShape(
+                topEnd = Dimens.CornerRadiusMedium,
+                bottomEnd = Dimens.CornerRadiusMedium
+            ))
             .clipToBounds()
     ) {
         Box(
@@ -69,7 +73,7 @@ fun SwipeToRevealBox(
                 .offset {
                     IntOffset(x = (revealedWidthPx + offsetX.value).roundToInt(), y = 0)
                 }
-                .background(MaterialTheme.colorScheme.onSurface)
+                .background(MaterialTheme.colorScheme.primaryContainer)
         ) {
             revealedContent()
         }
@@ -114,13 +118,26 @@ fun OriginalResultCard(resultCardModel: ResultCardModel) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = Dimens.PaddingSmall, vertical = Dimens.PaddingMedium),
+            .clip(RoundedCornerShape(
+                topEnd = Dimens.CornerRadiusMedium,
+                bottomEnd = Dimens.CornerRadiusMedium
+            ))
+            .padding(horizontal = Dimens.PaddingSmall),
         verticalAlignment = Alignment.CenterVertically
     ) {
+        // Indicator
+        Box(
+            modifier = Modifier
+                .height(Dimens.IndicatorHeight)
+                .width(Dimens.IndicatorWidth)
+                .clip(RoundedCornerShape(Dimens.CornerRadiusMedium))
+                .background(MaterialTheme.colorScheme.primary)
+        )
+
         Column(
             modifier = Modifier
                 .weight(1f)
-                .padding(end = Dimens.PaddingMedium)
+                .padding(horizontal = Dimens.PaddingMedium)
         ) {
             Text(
                 resultCardModel.subtitle,
@@ -154,6 +171,7 @@ private fun SwipeActionItem(
         modifier = modifier
             .fillMaxHeight()
             .background(backgroundColor)
+            .clickable(onClick = onClick)
             .padding(Dimens.PaddingSmall),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
@@ -173,14 +191,18 @@ fun SwipeableResultCard(resultCardModel: ResultCardModel, onDelete: () -> Unit, 
     SwipeToRevealBox(
         revealedContentWidth = Dimens.RevealedWidth,
         content = {
-            OriginalResultCard(resultCardModel = resultCardModel)
+            Box(
+                modifier = Modifier.fillMaxHeight(),
+                contentAlignment = Alignment.Center
+            ) {
+                OriginalResultCard(resultCardModel = resultCardModel)
+            }
         },
         revealedContent = {
             Row(
                 modifier = Modifier
                     .width(Dimens.RevealedWidth)
-                    .fillMaxHeight()
-                    .background(MaterialTheme.colorScheme.onSurface),
+                    .fillMaxHeight(),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 SwipeActionItem(

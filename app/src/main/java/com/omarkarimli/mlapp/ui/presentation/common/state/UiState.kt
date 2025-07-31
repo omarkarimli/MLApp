@@ -3,7 +3,7 @@ package com.omarkarimli.mlapp.ui.presentation.common.state
 sealed class UiState {
     object Idle : UiState()
     object Loading : UiState()
-    object Success : UiState()
+    data class Success(val message: String) : UiState()
     data class Error(val message: String) : UiState()
 
     data class PermissionAction(val permission: String) : UiState()

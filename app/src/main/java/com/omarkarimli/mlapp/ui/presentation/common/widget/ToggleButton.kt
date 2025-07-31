@@ -22,8 +22,8 @@ fun ToggleButton(
         modifier = Modifier.size(Dimens.IconSizeLarge),
         shape = IconButtonDefaults.filledShape,
         colors = IconButtonDefaults.filledIconButtonColors(
-            containerColor = if (isToggled) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.onPrimaryContainer,
-            contentColor = if (isToggled) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.primaryContainer
+            containerColor = MaterialTheme.colorScheme.surfaceContainer,
+            contentColor = MaterialTheme.colorScheme.onSurface
         )
     ) {
         Icon(

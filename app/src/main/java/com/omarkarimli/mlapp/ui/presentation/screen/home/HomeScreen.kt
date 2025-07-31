@@ -307,8 +307,7 @@ private fun ScrollContent(
 @Composable
 private fun RecentlySaved(filteredSavedResults: List<ResultCardModel>) {
     Column(
-        modifier = Modifier
-            .fillMaxWidth(), // Removed horizontal padding from here, now applied to LazyColumn contentPadding
+        modifier = Modifier.fillMaxWidth()
     ) {
         Text(
             text = "Recently Saved",
@@ -325,10 +324,9 @@ private fun RecentlySaved(filteredSavedResults: List<ResultCardModel>) {
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         } else {
-            // Replaced LazyColumn with Column for direct iteration
             Column(
-                modifier = Modifier.fillMaxWidth(),
-                verticalArrangement = Arrangement.spacedBy(Dimens.PaddingExtraSmall) // Spacing between result cards
+                modifier = Modifier.fillMaxWidth().padding(top = Dimens.PaddingSmall),
+                verticalArrangement = Arrangement.spacedBy(Dimens.PaddingMedium)
             ) {
                 filteredSavedResults.forEachIndexed { index, resultCard ->
                     OriginalResultCard(resultCard)

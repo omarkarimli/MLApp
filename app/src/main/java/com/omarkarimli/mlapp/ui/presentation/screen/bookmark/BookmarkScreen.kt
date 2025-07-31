@@ -74,7 +74,11 @@ fun BookmarkScreen() {
         when (uiState) {
             UiState.Loading -> { /* Handle loading if needed */ }
             is UiState.Success -> {
-                context.showToast("Item deleted")
+                val successMessage = (uiState as UiState.Success).message
+                context.showToast(successMessage)
+                Log.e("BookmarkScreen", "Success: $successMessage")
+
+                viewModel.resetUiState()
             }
             is UiState.Error -> {
                 val errorMessage = (uiState as UiState.Error).message
@@ -191,19 +195,21 @@ private fun ScrollContent(
             .fillMaxWidth()
     ) {
         Spacer(modifier = Modifier.height(Dimens.SpacerExtraLarge))
-        SearchLayout(searchQuery) { viewModel.setSearchQuery(searchQuery) }
+        SearchLayout(searchQuery, { newQuery -> viewModel.setSearchQuery(newQuery) })
         Spacer(modifier = Modifier.height(Dimens.SpacerMedium))
 
         LazyColumn(
             modifier = Modifier
                 .fillMaxWidth()
                 .weight(1f),
-            contentPadding = PaddingValues(horizontal = Dimens.PaddingLarge)
+            verticalArrangement = Arrangement.spacedBy(Dimens.PaddingMedium),
+            contentPadding = PaddingValues(Dimens.PaddingMedium)
         ) {
             // Using items(count: Int) and manually accessing items from LazyPagingItems
             items(
                 count = savedResults.itemCount,
-                key = { index -> savedResults[index]?.id ?: PagingPlaceholderKey(index) }
+                key = { index -> savedResults.peek(index)?.id ?: index }
+                // key = { index -> savedResults[index]?.id ?: PagingPlaceholderKey(index) }
             ) { index ->
                 val result = savedResults[index]
                 result?.let {
@@ -280,7 +286,3 @@ private fun ScrollContent(
         }
     }
 }
-
-// You can define PagingPlaceholderKey to handle the case where the item is a placeholder
-// This is a common pattern for Paging 3 to ensure stability.
-private data class PagingPlaceholderKey(private val index: Int)

@@ -84,6 +84,10 @@ object Dimens {
     const val DrawLineStrokeWidth = 6f
     const val DrawLabelTextSize = 40f
 
+    // Indicator
+    val IndicatorWidth = 4.dp
+    val IndicatorHeight = 42.dp
+
     const val FixedFaceMeshScaleFactor = 1.25f
 
     const val FixedFaceMeshPaddingX = 172f

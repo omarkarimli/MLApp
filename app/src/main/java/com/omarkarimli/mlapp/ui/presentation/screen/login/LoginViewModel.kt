@@ -35,10 +35,10 @@ class LoginViewModel @Inject constructor(
                 Log.e("LoginViewModel", "LOGIN KEY: " + sharedPreferenceRepository.getBoolean(
                     Constants.LOGIN_KEY, false).toString())
 
-                _uiState.value = UiState.Success
+                _uiState.value = UiState.Success("Logged in successfully")
             }
         } else {
-            _uiState.value = UiState.Error("Bio and website cannot be empty")
+            _uiState.value = UiState.Error("Fill gaps")
         }
     }
 

@@ -8,20 +8,17 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
-import com.omarkarimli.mlapp.ui.navigation.Screen
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.omarkarimli.mlapp.ui.navigation.LocalNavController
+import com.omarkarimli.mlapp.ui.navigation.Screen
 import com.omarkarimli.mlapp.ui.presentation.common.state.UiState
 import com.omarkarimli.mlapp.ui.presentation.common.widget.WeightedImageDisplay
 import com.omarkarimli.mlapp.utils.Dimens
-import com.omarkarimli.mlapp.utils.showToast
 
 @Composable
 fun SplashScreen() {
     val viewModel: SplashViewModel = hiltViewModel()
     val navController = LocalNavController.current
-    val context = LocalContext.current
 
     val uiState by viewModel.uiState.collectAsState()
 
@@ -29,15 +26,15 @@ fun SplashScreen() {
         when (uiState) {
             UiState.Loading -> {}
             is UiState.Success -> {
+                val successMessage = (uiState as UiState.Success).message
+                Log.e("SplashScreen", "Success: $successMessage")
                 navController.navigate(Screen.Home.route) {
                     popUpTo(Screen.Splash.route) { inclusive = true }
                 }
-                context.showToast("Login successful")
             }
             is UiState.Error -> {
                 val errorMessage = (uiState as UiState.Error).message
-                context.showToast(errorMessage)
-                Log.e("LoginScreen", "Error: $errorMessage")
+                Log.e("SplashScreen", "Error: $errorMessage")
                 navController.navigate(Screen.Onboarding.route) {
                     popUpTo(Screen.Splash.route) { inclusive = true }
                 }

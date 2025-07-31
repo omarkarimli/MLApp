@@ -58,7 +58,7 @@ class BookmarkViewModel @Inject constructor(
         viewModelScope.launch {
             roomRepository.deleteSavedResult(id)
 
-            _uiState.value = UiState.Success
+            _uiState.value = UiState.Success("Item deleted successfully")
         }
     }
 

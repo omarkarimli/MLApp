@@ -165,11 +165,10 @@ private fun ScrollContent(
     ) {
         Spacer(modifier = Modifier.height(Dimens.SpacerLarge))
 
-        // LazyColumn for the scrollable list - now it takes the remaining space
         LazyColumn(
-            modifier = Modifier
-                .fillMaxWidth(),
-            verticalArrangement = Arrangement.spacedBy(Dimens.PaddingSmall) // Space between list items
+            modifier = Modifier.fillMaxWidth(),
+            verticalArrangement = Arrangement.spacedBy(Dimens.PaddingSmall),
+            contentPadding = PaddingValues(horizontal = Dimens.PaddingLarge)
         ) {
             items(items) { item ->
                 ListItemUi(item = item)
