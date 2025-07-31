@@ -1,5 +1,6 @@
 package com.omarkarimli.mlapp.ui.presentation.screen.settings
 
+import android.content.Context
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.material3.MaterialTheme
@@ -46,20 +47,24 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.omarkarimli.mlapp.domain.models.StandardListItemModel
 import com.omarkarimli.mlapp.ui.presentation.common.widget.StandardListItemUi
-import com.omarkarimli.mlapp.ui.presentation.screen.MainViewModel
+import com.omarkarimli.mlapp.ui.presentation.main.MainViewModel
+import com.omarkarimli.mlapp.utils.Constants
 import com.omarkarimli.mlapp.utils.Dimens
+import com.omarkarimli.mlapp.utils.copyToClipboard
+import com.omarkarimli.mlapp.utils.getVersionNumber
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun SettingsScreen() {
+fun SettingsScreen(mainViewModel: MainViewModel) {
     val viewModel: SettingsViewModel = hiltViewModel()
-    val mainViewModel: MainViewModel = hiltViewModel()
+    val context = LocalContext.current
     val scrollBehavior = TopAppBarDefaults.enterAlwaysScrollBehavior(rememberTopAppBarState())
 
     val isNotificationsEnabled by viewModel.isNotificationsEnabled.collectAsStateWithLifecycle()
@@ -72,11 +77,14 @@ fun SettingsScreen() {
         }
     ) { innerPadding ->
         ScrollContent(
+            context = context,
             innerPadding = innerPadding,
             isNotificationsEnabled = isNotificationsEnabled,
             isDarkModeEnabled = isDarkModeEnabled,
             onNotificationsToggle = viewModel::onNotificationsToggle,
-            onDarkModeToggle = mainViewModel::onThemeChange
+            onDarkModeToggle = mainViewModel::onThemeChange,
+            // Pass the new function to the content
+            onClearPreferences = { viewModel.clearSharedPreferences(isDarkModeEnabled) }
         )
     }
 }
@@ -139,11 +147,14 @@ private fun MyTopAppBar(scrollBehavior: TopAppBarScrollBehavior) {
 
 @Composable
 private fun ScrollContent(
+    context: Context,
     innerPadding: PaddingValues,
     isNotificationsEnabled: Boolean,
     isDarkModeEnabled: Boolean,
     onNotificationsToggle: (Boolean) -> Unit,
-    onDarkModeToggle: (Boolean) -> Unit
+    onDarkModeToggle: (Boolean) -> Unit,
+    // Add the new function parameter here
+    onClearPreferences: () -> Unit
 ) {
     var dialogState by remember { mutableStateOf<String?>(null) }
 
@@ -178,7 +189,8 @@ private fun ScrollContent(
             "Reset Settings",
             "Revert all settings to their default values.",
             Icons.AutoMirrored.Rounded.ArrowForward,
-            onClick = { /* Handle click for "Reset Settings" */ }
+            // Update the onClick lambda to set the dialogState
+            onClick = { dialogState = "resetSettings" }
         ),
         StandardListItemModel(
             "5",
@@ -186,7 +198,8 @@ private fun ScrollContent(
             "About App",
             "View app information and version.",
             Icons.AutoMirrored.Rounded.ArrowForward,
-            onClick = { /* Handle click for "About App" */ }
+            // Update the onClick lambda to set the dialogState
+            onClick = { dialogState = "aboutApp" }
         )
     )
 
@@ -231,6 +244,53 @@ private fun ScrollContent(
                     dialogState = null
                 },
                 onDismiss = { dialogState = null }
+            )
+        }
+        // New AlertDialog for Reset Settings
+        "resetSettings" -> {
+            AlertDialog(
+                onDismissRequest = { dialogState = null },
+                title = { Text(text = "Reset Settings") },
+                text = { Text(text = "Are you sure you want to revert all settings to their default values? This action cannot be undone.") },
+                confirmButton = {
+                    TextButton(
+                        onClick = {
+                            onClearPreferences() // Call the function to clear preferences
+                            dialogState = null
+                        }
+                    ) {
+                        Text("OK")
+                    }
+                },
+                dismissButton = {
+                    TextButton(onClick = { dialogState = null }) {
+                        Text("Cancel")
+                    }
+                }
+            )
+        }
+        // New AlertDialog for About App
+        "aboutApp" -> {
+            AlertDialog(
+                onDismissRequest = { dialogState = null },
+                title = { Text(text = "About App") },
+                text = {
+                    Text(
+                        text = "Version: " + context.getVersionNumber() + "\n\n" +
+                                "This is a machine learning companion app with Google ML Kit.\n" +
+                                "For support, please contact: " + Constants.MY_EMAIL
+                    )
+                },
+                confirmButton = {
+                    TextButton(
+                        onClick = {
+                            context.copyToClipboard(Constants.MY_EMAIL)
+                            dialogState = null
+                        }
+                    ) {
+                        Text("Copy Email")
+                    }
+                }
             )
         }
     }
@@ -291,4 +351,3 @@ private fun SettingsSelectionDialog(
         }
     )
 }
-

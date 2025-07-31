@@ -25,6 +25,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import com.omarkarimli.mlapp.ui.presentation.main.MainViewModel
 import com.omarkarimli.mlapp.ui.presentation.screen.facemeshdetection.FaceMeshDetectionScreen
 import com.omarkarimli.mlapp.ui.presentation.screen.bookmark.BookmarkScreen
 import com.omarkarimli.mlapp.ui.presentation.screen.home.HomeScreen
@@ -60,7 +61,7 @@ val LocalNavController = staticCompositionLocalOf<NavHostController> {
 }
 
 @Composable
-fun AppNavigation() {
+fun AppNavigation(mainViewModel: MainViewModel) {
     val navController = rememberNavController()
 
     val navBackStackEntry by navController.currentBackStackEntryAsState()
@@ -127,7 +128,7 @@ fun AppNavigation() {
                     BookmarkScreen()
                 }
                 composable(Screen.Settings.route) {
-                    SettingsScreen()
+                    SettingsScreen(mainViewModel)
                 }
                 composable(Screen.BarcodeScanning.route) {
                     BarcodeScanningScreen()

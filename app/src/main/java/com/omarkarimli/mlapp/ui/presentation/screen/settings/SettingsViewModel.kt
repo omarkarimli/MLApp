@@ -21,7 +21,6 @@ class SettingsViewModel @Inject constructor(
     private val _uiState = MutableStateFlow<UiState>(UiState.Idle)
     val uiState: StateFlow<UiState> = _uiState.asStateFlow()
 
-    // State for Notifications
     private val _isNotificationsEnabled = MutableStateFlow(false)
     val isNotificationsEnabled: StateFlow<Boolean> = _isNotificationsEnabled.asStateFlow()
 
@@ -54,9 +53,11 @@ class SettingsViewModel @Inject constructor(
         }
     }
 
-    fun clearSharedPreferences() {
+    fun clearSharedPreferences(isDarkModeEnabled: Boolean) {
         viewModelScope.launch {
             sharedPreferenceRepository.clearSharedPreferences()
+            sharedPreferenceRepository.saveBoolean(Constants.LOGIN_KEY, true)
+            sharedPreferenceRepository.saveBoolean(Constants.DARK_MODE, isDarkModeEnabled)
         }
     }
 

@@ -1,19 +1,14 @@
-package com.omarkarimli.mlapp.ui.presentation
+package com.omarkarimli.mlapp.ui.presentation.main
 
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.material3.Surface
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.ui.Modifier
 import androidx.hilt.navigation.compose.hiltViewModel
-import com.omarkarimli.mlapp.ui.theme.MLAppTheme
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.omarkarimli.mlapp.ui.navigation.AppNavigation
-import com.omarkarimli.mlapp.ui.presentation.screen.MainViewModel
+import com.omarkarimli.mlapp.ui.theme.MLAppTheme
 import dagger.hilt.android.AndroidEntryPoint
 
 @AndroidEntryPoint
@@ -25,16 +20,12 @@ class MainActivity : ComponentActivity() {
 
         setContent {
             val mainViewModel: MainViewModel = hiltViewModel()
-            val isDarkMode by mainViewModel.isDarkModeEnabled.collectAsState()
+            val isDarkMode by mainViewModel.isDarkModeEnabled.collectAsStateWithLifecycle()
 
             MLAppTheme(
                 darkTheme = isDarkMode
             ) {
-                Surface(
-                    modifier = Modifier.fillMaxSize()
-                ) {
-                    AppNavigation()
-                }
+                AppNavigation(mainViewModel)
             }
         }
     }

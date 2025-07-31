@@ -1,6 +1,11 @@
 package com.omarkarimli.mlapp.utils
 
 object Constants {
+    const val CLIPBOARD_LABEL = "plain text"
+
+    // My email
+    const val MY_EMAIL = "omarkarimli.361@gmail.com"
+
     // Room
     const val DATABASE_NAME = "app_database"
 

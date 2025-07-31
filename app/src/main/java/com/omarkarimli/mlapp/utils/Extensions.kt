@@ -1,5 +1,7 @@
 package com.omarkarimli.mlapp.utils
 
+import android.content.ClipData
+import android.content.ClipboardManager
 import android.content.Context
 import android.content.res.Configuration
 import android.widget.Toast
@@ -14,6 +16,27 @@ import com.omarkarimli.mlapp.domain.models.ScannedObject
 // Toast
 fun Context.showToast(message: String) {
     Toast.makeText(this, message, Toast.LENGTH_SHORT).show()
+}
+
+fun Context.copyToClipboard(text: String) {
+    // Get the ClipboardManager from the system service
+    val clipboardManager = this.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+
+    // Create a new ClipData object.
+    // The label is a user-visible description of the clip's content.
+    val clipData = ClipData.newPlainText("text_label", text)
+
+    // Set the clip data to the clipboard.
+    clipboardManager.setPrimaryClip(clipData)
+
+    // Toast
+    this.showToast("Copied to clipboard")
+}
+
+fun Context.getVersionNumber(): String {
+    val packageInfo = this.packageManager.getPackageInfo(this.packageName, 0)
+    val appVersion = packageInfo.versionName
+    return appVersion ?: "1.0"
 }
 
 fun Context.getDeviceScreenRatioDp(): Float {

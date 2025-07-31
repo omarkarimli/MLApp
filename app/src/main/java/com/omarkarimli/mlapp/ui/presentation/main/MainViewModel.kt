@@ -1,4 +1,4 @@
-package com.omarkarimli.mlapp.ui.presentation.screen
+package com.omarkarimli.mlapp.ui.presentation.main
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -15,14 +15,17 @@ import javax.inject.Inject
 @HiltViewModel
 class MainViewModel @Inject constructor(
     private val sharedPreferenceRepository: SharedPreferenceRepository,
-    private val themeRepository: ThemeRepository
+    val themeRepository: ThemeRepository
 ) : ViewModel() {
 
     private val _isDarkModeEnabled = MutableStateFlow(false)
     val isDarkModeEnabled: StateFlow<Boolean> = _isDarkModeEnabled.asStateFlow()
 
     init {
-        // Load initial theme from preferences
+        loadInitialTheme()
+    }
+
+    private fun loadInitialTheme() {
         viewModelScope.launch {
             _isDarkModeEnabled.value = sharedPreferenceRepository.getBoolean(
                 Constants.DARK_MODE,
@@ -37,6 +40,7 @@ class MainViewModel @Inject constructor(
         viewModelScope.launch {
             _isDarkModeEnabled.value = isDarkMode
             sharedPreferenceRepository.saveBoolean(Constants.DARK_MODE, isDarkMode)
+
             themeRepository.applyTheme(isDarkMode)
         }
     }
