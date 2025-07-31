@@ -121,10 +121,6 @@ class BarcodeScanningViewModel @Inject constructor(
     fun toggleCameraActive() {
         if (hasCameraPermission.value) {
             _isCameraActive.value = !_isCameraActive.value
-//            // Clear live analysis results when pausing, keep static ones
-//            if (!_isCameraActive.value) {
-//                _barcodeResults.value = _barcodeResults.value.filter { it.imageUri != null }
-//            }
         } else {
             _uiState.value = UiState.Error("Camera permission is required to toggle camera active state.")
         }
@@ -136,7 +132,6 @@ class BarcodeScanningViewModel @Inject constructor(
 
     fun saveCurrentResults() {
         viewModelScope.launch {
-            // Convert ScannedBarcode list to ResultCardModel list using the extension function
             val resultCardsToSave = _barcodeResults.value.toResultCards()
             if (resultCardsToSave.isNotEmpty()) {
                 resultCardsToSave.forEach { resultCard ->

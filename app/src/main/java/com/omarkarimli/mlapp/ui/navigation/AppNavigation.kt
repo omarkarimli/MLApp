@@ -29,7 +29,7 @@ import com.omarkarimli.mlapp.ui.presentation.screen.facemeshdetection.FaceMeshDe
 import com.omarkarimli.mlapp.ui.presentation.screen.bookmark.BookmarkScreen
 import com.omarkarimli.mlapp.ui.presentation.screen.home.HomeScreen
 import com.omarkarimli.mlapp.ui.presentation.screen.imagelabeling.ImageLabelingScreen
-import com.omarkarimli.mlapp.ui.presentation.screen.LoginScreen
+import com.omarkarimli.mlapp.ui.presentation.screen.login.LoginScreen
 import com.omarkarimli.mlapp.ui.presentation.screen.objectdetection.ObjectDetectionScreen
 import com.omarkarimli.mlapp.ui.presentation.screen.OnboardingScreen
 import com.omarkarimli.mlapp.ui.presentation.screen.SettingsScreen

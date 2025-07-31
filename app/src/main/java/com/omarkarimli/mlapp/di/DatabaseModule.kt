@@ -6,6 +6,7 @@ import com.omarkarimli.mlapp.data.local.AppDatabase
 import com.omarkarimli.mlapp.data.local.ResultCardDao
 import com.omarkarimli.mlapp.data.repository.RoomRepositoryImpl
 import com.omarkarimli.mlapp.domain.repository.RoomRepository
+import com.omarkarimli.mlapp.utils.Constants
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -23,7 +24,7 @@ object DatabaseModule {
         return Room.databaseBuilder(
             context,
             AppDatabase::class.java,
-            "ml_app_database" // Database name
+            Constants.DATABASE_NAME
         ).build()
     }
 

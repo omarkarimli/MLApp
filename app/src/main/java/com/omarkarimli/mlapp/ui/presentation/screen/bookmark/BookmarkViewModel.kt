@@ -6,6 +6,7 @@ import androidx.paging.PagingData
 import androidx.paging.cachedIn
 import com.omarkarimli.mlapp.domain.models.ResultCardModel
 import com.omarkarimli.mlapp.domain.repository.RoomRepository
+import com.omarkarimli.mlapp.ui.presentation.common.state.UiState
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.FlowPreview
@@ -25,7 +26,9 @@ class BookmarkViewModel @Inject constructor(
     private val roomRepository: RoomRepository
 ) : ViewModel() {
 
-    // StateFlow to hold the current search query
+    private val _uiState = MutableStateFlow<UiState>(UiState.Idle)
+    val uiState: StateFlow<UiState> = _uiState.asStateFlow()
+
     private val _searchQuery = MutableStateFlow("")
     val searchQuery: StateFlow<String> = _searchQuery.asStateFlow()
 
@@ -54,6 +57,12 @@ class BookmarkViewModel @Inject constructor(
     fun deleteSavedResult(id: Int) {
         viewModelScope.launch {
             roomRepository.deleteSavedResult(id)
+
+            _uiState.value = UiState.Success
         }
+    }
+
+    fun resetUiState() {
+        _uiState.value = UiState.Idle
     }
 }

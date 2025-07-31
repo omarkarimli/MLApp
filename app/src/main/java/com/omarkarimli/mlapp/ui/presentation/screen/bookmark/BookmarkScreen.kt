@@ -2,6 +2,7 @@
 
 package com.omarkarimli.mlapp.ui.presentation.screen.bookmark
 
+import android.util.Log
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -30,6 +31,7 @@ import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.TopAppBarScrollBehavior
 import androidx.compose.material3.rememberTopAppBarState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -38,6 +40,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -47,21 +50,43 @@ import androidx.paging.compose.LazyPagingItems
 import androidx.paging.compose.collectAsLazyPagingItems
 import com.omarkarimli.mlapp.domain.models.ResultCardModel
 import com.omarkarimli.mlapp.ui.navigation.Screen
+import com.omarkarimli.mlapp.ui.presentation.common.state.UiState
 import com.omarkarimli.mlapp.ui.presentation.common.widget.SwipeableResultCard
 import com.omarkarimli.mlapp.ui.presentation.common.widget.SearchLayout
 import com.omarkarimli.mlapp.utils.Dimens
+import com.omarkarimli.mlapp.utils.showToast
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun BookmarkScreen() {
-    val scrollBehavior = TopAppBarDefaults.enterAlwaysScrollBehavior(rememberTopAppBarState())
-
     val viewModel: BookmarkViewModel = hiltViewModel()
+    val scrollBehavior = TopAppBarDefaults.enterAlwaysScrollBehavior(rememberTopAppBarState())
+    val context = LocalContext.current
+
     val savedResults = viewModel.savedResults.collectAsLazyPagingItems() // Collect PagingData
     val searchQuery by viewModel.searchQuery.collectAsState() // Observe search query from ViewModel
 
     // State to control the visibility of the alert dialog
     var showClearAllDialog by remember { mutableStateOf(false) }
+
+    val uiState by viewModel.uiState.collectAsState()
+    LaunchedEffect(uiState) {
+        when (uiState) {
+            UiState.Loading -> { /* Handle loading if needed */ }
+            is UiState.Success -> {
+                context.showToast("Item deleted")
+            }
+            is UiState.Error -> {
+                val errorMessage = (uiState as UiState.Error).message
+                context.showToast(errorMessage)
+                Log.e("BookmarkScreen", "Error: $errorMessage")
+
+                viewModel.resetUiState()
+            }
+            is UiState.PermissionAction -> { /* Handle permission action if needed */ }
+            UiState.Idle -> { /* Hide any loading indicators */ }
+        }
+    }
 
     Scaffold(
         modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
@@ -155,6 +180,8 @@ private fun ScrollContent(
     searchQuery: String,
     viewModel: BookmarkViewModel
 ) {
+    val context = LocalContext.current
+
     Column(
         modifier = Modifier
             .padding(
@@ -175,16 +202,12 @@ private fun ScrollContent(
         ) {
             // Using items(count: Int) and manually accessing items from LazyPagingItems
             items(
-                count = savedResults.itemCount, // Use itemCount for the total number of items
-                key = { index ->
-                    // Provide a unique key. It's crucial for performance and state preservation.
-                    // Use the item's ID if available, otherwise fall back to index (less ideal).
-                    savedResults.peek(index)?.id ?: index
-                }
+                count = savedResults.itemCount,
+                key = { index -> savedResults[index]?.id ?: PagingPlaceholderKey(index) }
             ) { index ->
                 val result = savedResults[index]
                 result?.let {
-                    SwipeableResultCard(it, onDelete = { viewModel.deleteSavedResult(it.id) }, onInfo = {})
+                    SwipeableResultCard(it, onDelete = { viewModel.deleteSavedResult(it.id) }, onInfo = { context.showToast("${it.title}: ${it.subtitle}") })
                 }
             }
 
@@ -257,3 +280,7 @@ private fun ScrollContent(
         }
     }
 }
+
+// You can define PagingPlaceholderKey to handle the case where the item is a placeholder
+// This is a common pattern for Paging 3 to ensure stability.
+private data class PagingPlaceholderKey(private val index: Int)

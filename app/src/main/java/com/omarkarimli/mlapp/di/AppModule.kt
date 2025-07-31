@@ -2,10 +2,12 @@ package com.omarkarimli.mlapp.di
 
 import android.app.Application
 import android.content.Context
+import android.content.SharedPreferences
 import android.os.Build.VERSION.SDK_INT
 import coil.ImageLoader
 import coil.decode.GifDecoder
 import coil.decode.ImageDecoderDecoder
+import com.omarkarimli.mlapp.utils.Constants.SHARED_PREFS
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -16,10 +18,6 @@ import javax.inject.Singleton
 @Module
 @InstallIn(SingletonComponent::class)
 object AppModule {
-
-    @Singleton
-    @Provides
-    fun provideContext(app: Application): Context = app
 
     @Provides
     @Singleton
@@ -33,5 +31,11 @@ object AppModule {
                 }
             }
             .build()
+    }
+
+    @Provides
+    @Singleton
+    fun provideSharedPreferences(@ApplicationContext context: Context): SharedPreferences {
+        return context.getSharedPreferences(SHARED_PREFS, Context.MODE_PRIVATE)
     }
 }

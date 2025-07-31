@@ -1,9 +1,15 @@
 package com.omarkarimli.mlapp.utils
 
 object Constants {
+    // Room
+    const val DATABASE_NAME = "app_database"
+
+    // Shared Preferences
     const val SHARED_PREFS = "shared_prefs"
-    const val IS_LOGGED_IN = "is_logged_in"
-    const val IS_NOTIFICATIONS_ENABLED = "is_notifications_enabled"
+    const val BIO = "bio"
+    const val WEBSITE = "website"
+    const val LOGIN_KEY = "login_key"
+    const val NOTIFICATION_KEY = "notification_key"
     const val DARK_MODE = "dark_mode"
 
     // Font

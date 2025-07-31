@@ -80,9 +80,9 @@ fun WeightedImageDisplay(modifier: Modifier = Modifier) {
             horizontalArrangement = Arrangement.spacedBy(Dimens.SpacerMedium)
         ) {
             val images = listOf(
-                painterResource(id = R.drawable.onboarding_image_1),
-                painterResource(id = R.drawable.onboarding_image_2),
-                painterResource(id = R.drawable.onboarding_image_3)
+                painterResource(id = R.drawable.i1),
+                painterResource(id = R.drawable.i2),
+                painterResource(id = R.drawable.i3)
             )
 
             images.forEachIndexed { index, imageResource ->

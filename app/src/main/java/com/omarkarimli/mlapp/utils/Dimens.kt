@@ -5,7 +5,7 @@ import androidx.compose.ui.unit.sp
 
 object Dimens {
     // Static Device Ratio
-    val staticDeviceRatio: Float = 1080f / 2400f
+    const val staticDeviceRatio: Float = 1080f / 2400f
 
     // Duration anim
     const val animDurationMedium = 500
@@ -13,11 +13,8 @@ object Dimens {
     // Splash Duration
     const val splashDuration = 3000L
 
-    // Toast
-    const val toastDurationMillis = 300L
-    const val textAnimationDelayMillis: Long = 600L // Delay before text starts animating
-    const val textAnimationDurationMillis: Int = 1200 // Duration for text slide and fade
-    const val toastEntryExitDurationMillis: Int = 800 // Duration for toast slide-in/out
+    // Shape Change
+    const val CarouselChangeDelay = 500L
 
     // Swipe to Reveal
     val RevealedWidth = 128.dp

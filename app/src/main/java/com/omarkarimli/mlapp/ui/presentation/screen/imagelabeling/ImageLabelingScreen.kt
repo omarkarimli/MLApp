@@ -138,6 +138,7 @@ fun ImageLabelingScreen() {
     LaunchedEffect(uiState) {
         when (uiState) {
             UiState.Loading -> { /* Handle loading if needed */ }
+            is UiState.Success -> { /* Handle success if needed */ }
             is UiState.Error -> {
                 val errorMessage = (uiState as UiState.Error).message
                 context.showToast(errorMessage)
