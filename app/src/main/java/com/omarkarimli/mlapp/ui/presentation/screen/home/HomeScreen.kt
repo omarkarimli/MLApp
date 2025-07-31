@@ -18,21 +18,19 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowForward
 import androidx.compose.material.icons.rounded.Add
-import androidx.compose.material.icons.rounded.CameraAlt
 import androidx.compose.material.icons.rounded.CenterFocusStrong
 import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.Face
 import androidx.compose.material.icons.rounded.ImageSearch
-import androidx.compose.material.icons.rounded.MoreHoriz
 import androidx.compose.material.icons.rounded.QrCodeScanner
 import androidx.compose.material.icons.rounded.TextFields
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FilledIconButton
 import androidx.compose.material3.FilledTonalIconButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButtonDefaults
@@ -56,6 +54,7 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.DpOffset
 import com.omarkarimli.mlapp.R
 import com.omarkarimli.mlapp.domain.models.StandardListItemModel
 import com.omarkarimli.mlapp.ui.navigation.Screen
@@ -76,7 +75,6 @@ fun HomeScreen() {
     val viewModel: HomeViewModel = hiltViewModel()
     val savedResults by viewModel.savedResults.collectAsState()
 
-    // Sample data for your list (unchanged)
     val items = listOf(
         StandardListItemModel(
             "1",
@@ -126,7 +124,7 @@ fun HomeScreen() {
             MyTopAppBar(scrollBehavior, items)
         }
     ) { innerPadding ->
-        ScrollContent(innerPadding, items, savedResults) // Pass savedResults
+        ScrollContent(innerPadding, items, savedResults)
     }
 }
 
@@ -169,75 +167,39 @@ private fun MyTopAppBar(scrollBehavior: TopAppBarScrollBehavior, items: List<Sta
                 )
             }
         },
-        navigationIcon = {
-            Row {
-                Spacer(Modifier.size(Dimens.PaddingSmall))
-                FilledIconButton(
-                    onClick = { expanded = !expanded },
-                    modifier = Modifier.size(Dimens.IconSizeLarge),
-                    shape = IconButtonDefaults.filledShape,
-                    colors = IconButtonDefaults.filledIconButtonColors(
-                        containerColor = MaterialTheme.colorScheme.surfaceContainer,
-                        contentColor = MaterialTheme.colorScheme.onSurface
-                    )
-                ) {
-                    Icon(
-                        imageVector = if (expanded) Icons.Rounded.Close else Icons.Rounded.MoreHoriz,
-                        contentDescription = "Menu",
-                        modifier = Modifier.size(Dimens.IconSizeMedium)
-                    )
-                }
-                Spacer(Modifier.size(Dimens.PaddingSmall))
-            }
-
-            DropdownMenu(
-                expanded = expanded,
-                onDismissRequest = { expanded = false }
-            ) {
-                // Dynamically display items from the list
-                items.forEach { item ->
-                    DropdownMenuItem(
-                        text = { Text(item.title) },
-                        leadingIcon = { Icon(item.icon, contentDescription = null) },
-                        onClick = {
-                            item.onClick() // Call the onClick lambda
-                            expanded = false
-                        }
-                    )
-                }
-            }
-        },
         actions = {
-            FilledIconButton(
-                onClick = { /* do something */ },
-                modifier = Modifier.size(Dimens.IconSizeLarge),
-                shape = IconButtonDefaults.filledShape,
-                colors = IconButtonDefaults.filledIconButtonColors(
-                    containerColor = MaterialTheme.colorScheme.surfaceContainer,
-                    contentColor = MaterialTheme.colorScheme.onSurface
-                )
-            ) {
-                Icon(
-                    imageVector = Icons.Rounded.CameraAlt,
-                    modifier = Modifier.size(Dimens.IconSizeSmall),
-                    contentDescription = "Open Camera"
-                )
-            }
-            Spacer(Modifier.size(Dimens.PaddingSmall))
             FilledTonalIconButton(
-                onClick = { /* doSomething() */ },
+                onClick = { expanded = !expanded },
                 modifier = Modifier
                     .width(Dimens.IconSizeExtraLarge)
                     .height(Dimens.IconSizeLarge),
                 shape = IconButtonDefaults.filledShape
             ) {
                 Icon(
-                    Icons.Rounded.Add,
+                    if (expanded) Icons.Rounded.Close else Icons.Rounded.Add,
                     modifier = Modifier.size(Dimens.IconSizeSmall),
                     contentDescription = "Add new collab"
                 )
             }
             Spacer(Modifier.size(Dimens.PaddingSmall))
+
+            DropdownMenu(
+                expanded = expanded,
+                onDismissRequest = { expanded = false },
+                shape = RoundedCornerShape(Dimens.CornerRadiusLarge),
+                offset = DpOffset(-Dimens.PaddingSmall, Dimens.PaddingSmall)
+            ) {
+                items.forEach { item ->
+                    DropdownMenuItem(
+                        text = { Text(item.title) },
+                        leadingIcon = { Icon(item.icon, contentDescription = null) },
+                        onClick = {
+                            item.onClick()
+                            expanded = false
+                        }
+                    )
+                }
+            }
         }
     )
 }
