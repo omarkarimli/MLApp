@@ -31,25 +31,24 @@ fun WeightedImageDisplay(modifier: Modifier = Modifier) {
 
     val weights = remember {
         listOf(
-            Animatable(1f),
-            Animatable(1f),
+            Animatable(0.5f),
+            Animatable(0.5f),
             Animatable(1f)
         )
     }
 
     // Initialize weights only once when the composable is first launched
     LaunchedEffect(Unit) {
-        weights[0].snapTo(2f)
-        weights[1].snapTo(1.5f)
-        weights[2].snapTo(0.5f)
+        weights[0].snapTo(0.5f)
+        weights[1].snapTo(0.5f)
+        weights[2].snapTo(1f)
     }
 
     LaunchedEffect(isAnimationPlaying.value) {
         if (isAnimationPlaying.value) {
-            // Start from the current selectedIndex if resuming
             var currentIndex = selectedIndex.intValue
 
-            while (isActive && isAnimationPlaying.value) { // Check isActive for coroutine cancellation safety
+            while (isActive && isAnimationPlaying.value) {
                 selectedIndex.intValue = currentIndex
 
                 weights.forEachIndexed { index, animatableWeight ->

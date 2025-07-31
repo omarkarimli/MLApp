@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Bookmark
 import androidx.compose.material.icons.rounded.ClearAll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
@@ -51,8 +52,8 @@ import androidx.paging.compose.collectAsLazyPagingItems
 import com.omarkarimli.mlapp.domain.models.ResultCardModel
 import com.omarkarimli.mlapp.ui.navigation.Screen
 import com.omarkarimli.mlapp.ui.presentation.common.state.UiState
-import com.omarkarimli.mlapp.ui.presentation.common.widget.SwipeableResultCard
 import com.omarkarimli.mlapp.ui.presentation.common.widget.SearchLayout
+import com.omarkarimli.mlapp.ui.presentation.common.widget.SwipeableResultCard
 import com.omarkarimli.mlapp.utils.Dimens
 import com.omarkarimli.mlapp.utils.showToast
 
@@ -271,6 +272,12 @@ private fun ScrollContent(
                                         modifier = Modifier.padding(vertical = Dimens.PaddingMedium)
                                     )
                                 } else {
+                                    Icon(
+                                        Icons.Outlined.Bookmark,
+                                        modifier = Modifier.size(Dimens.IconSizeExtraLarge),
+                                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        contentDescription = "Empty"
+                                    )
                                     Text(
                                         text = "No saved item found",
                                         style = MaterialTheme.typography.bodyMedium,

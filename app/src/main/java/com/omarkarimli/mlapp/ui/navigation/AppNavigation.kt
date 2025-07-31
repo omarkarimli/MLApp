@@ -1,5 +1,9 @@
 package com.omarkarimli.mlapp.ui.navigation
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Bookmark
@@ -15,7 +19,11 @@ import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -38,6 +46,22 @@ import com.omarkarimli.mlapp.ui.presentation.screen.splash.SplashScreen
 import com.omarkarimli.mlapp.ui.presentation.screen.barcodescanning.BarcodeScanningScreen
 import com.omarkarimli.mlapp.ui.presentation.screen.profile.ProfileScreen
 import com.omarkarimli.mlapp.ui.presentation.screen.textrecognition.TextRecognitionScreen
+import kotlinx.coroutines.delay
+
+sealed class Screen(val route: String, val title: String) {
+    data object Home : Screen("home", "Home")
+    data object Bookmarks : Screen("bookmarks", "Bookmarks")
+    data object Settings : Screen("settings", "Settings")
+    data object Profile : Screen("profile", "Profile")
+    data object Onboarding: Screen("onboarding", "Onboarding")
+    data object Login: Screen("login", "Login")
+    data object Splash: Screen("splash", "Splash")
+    data object BarcodeScanning: Screen("barcode_scanning", "Barcode Scanning")
+    data object ImageLabeling: Screen("image_labeling", "Image Labeling")
+    data object TextRecognition: Screen("text_recognition", "Text Recognition")
+    data object ObjectDetection: Screen("object_detection", "Object Detection")
+    data object FaceMeshDetection: Screen("face_mesh_detection", "Face Mesh Detection")
+}
 
 sealed class BottomBarDestination(
     val route: String,
@@ -64,16 +88,39 @@ val LocalNavController = staticCompositionLocalOf<NavHostController> {
 @Composable
 fun AppNavigation(mainViewModel: MainViewModel) {
     val navController = rememberNavController()
-
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route
 
+    // State to control the visibility of the bottom bar
+    var showBottomBar by remember { mutableStateOf(false) }
+
+    // Use a LaunchedEffect to introduce a delay before showing the bottom bar
+    // This runs once when the composable is first launched and when currentRoute changes
+    LaunchedEffect(currentRoute) {
+        val destinationIsBottomBar = bottomBarDestinations.any { it.route == currentRoute }
+        if (destinationIsBottomBar) {
+            // Set a delay of 500ms before showing the bottom bar
+            delay(500L)
+            showBottomBar = true
+        } else {
+            showBottomBar = false
+        }
+    }
+
     Scaffold(
         bottomBar = {
-            // Conditionally show the NavigationBar based on the current route
-            val showBottomBar = bottomBarDestinations.any { it.route == currentRoute }
-            if (showBottomBar) {
-                // Use NavigationBar for modern bottom navigation
+            // AnimatedVisibility for slide-in/slide-out animations
+            AnimatedVisibility(
+                visible = showBottomBar,
+                enter = slideInVertically(
+                    initialOffsetY = { fullHeight -> fullHeight },
+                    animationSpec = tween(durationMillis = 300)
+                ),
+                exit = slideOutVertically(
+                    targetOffsetY = { fullHeight -> fullHeight },
+                    animationSpec = tween(durationMillis = 300)
+                )
+            ) {
                 NavigationBar(
                     containerColor = MaterialTheme.colorScheme.surface
                 ) {
@@ -152,19 +199,4 @@ fun AppNavigation(mainViewModel: MainViewModel) {
             }
         }
     }
-}
-
-sealed class Screen(val route: String, val title: String) {
-    data object Home : Screen("home", "Home")
-    data object Bookmarks : Screen("bookmarks", "Bookmarks")
-    data object Settings : Screen("settings", "Settings")
-    data object Profile : Screen("profile", "Profile")
-    data object Onboarding: Screen("onboarding", "Onboarding")
-    data object Login: Screen("login", "Login")
-    data object Splash: Screen("splash", "Splash")
-    data object BarcodeScanning: Screen("barcode_scanning", "Barcode Scanning")
-    data object ImageLabeling: Screen("image_labeling", "Image Labeling")
-    data object TextRecognition: Screen("text_recognition", "Text Recognition")
-    data object ObjectDetection: Screen("object_detection", "Object Detection")
-    data object FaceMeshDetection: Screen("face_mesh_detection", "Face Mesh Detection")
 }
