@@ -48,7 +48,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.google.mlkit.vision.common.InputImage
 import com.omarkarimli.mlapp.ui.navigation.LocalNavController
@@ -58,21 +57,12 @@ import com.omarkarimli.mlapp.ui.presentation.common.widget.BottomSheetContent
 import com.omarkarimli.mlapp.ui.presentation.common.widget.CameraPermissionPlaceholder
 import com.omarkarimli.mlapp.ui.presentation.common.widget.CameraPreview
 import com.omarkarimli.mlapp.ui.presentation.common.widget.ToggleButton
-import com.omarkarimli.mlapp.ui.theme.MLAppTheme
 import com.omarkarimli.mlapp.utils.Dimens
 import com.omarkarimli.mlapp.utils.showToast
 import com.omarkarimli.mlapp.utils.toResultCards
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-
-@Preview(showBackground = true)
-@Composable
-fun TextRecognitionScreenPreview() { // Changed preview function name
-    MLAppTheme {
-        TextRecognitionScreen()
-    }
-}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable

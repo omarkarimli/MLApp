@@ -7,6 +7,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -15,6 +16,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.selection.selectable
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowForward
 import androidx.compose.material.icons.outlined.Info
@@ -24,27 +26,44 @@ import androidx.compose.material.icons.rounded.Notifications
 import androidx.compose.material.icons.rounded.Person
 import androidx.compose.material.icons.rounded.QuestionMark
 import androidx.compose.material.icons.rounded.SettingsBackupRestore
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilledIconButton
 import androidx.compose.material3.FilledTonalIconButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MediumTopAppBar
+import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.TopAppBarScrollBehavior
 import androidx.compose.material3.rememberTopAppBarState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.omarkarimli.mlapp.domain.models.StandardListItemModel
 import com.omarkarimli.mlapp.ui.presentation.common.widget.StandardListItemUi
+import com.omarkarimli.mlapp.ui.presentation.screen.MainViewModel
 import com.omarkarimli.mlapp.utils.Dimens
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettingsScreen() {
+    val viewModel: SettingsViewModel = hiltViewModel()
+    val mainViewModel: MainViewModel = hiltViewModel()
     val scrollBehavior = TopAppBarDefaults.enterAlwaysScrollBehavior(rememberTopAppBarState())
+
+    val isNotificationsEnabled by viewModel.isNotificationsEnabled.collectAsStateWithLifecycle()
+    val isDarkModeEnabled by mainViewModel.isDarkModeEnabled.collectAsStateWithLifecycle()
 
     Scaffold(
         modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
@@ -52,14 +71,20 @@ fun SettingsScreen() {
             MyTopAppBar(scrollBehavior)
         }
     ) { innerPadding ->
-        ScrollContent(innerPadding)
+        ScrollContent(
+            innerPadding = innerPadding,
+            isNotificationsEnabled = isNotificationsEnabled,
+            isDarkModeEnabled = isDarkModeEnabled,
+            onNotificationsToggle = viewModel::onNotificationsToggle,
+            onDarkModeToggle = mainViewModel::onThemeChange
+        )
     }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun MyTopAppBar(scrollBehavior: TopAppBarScrollBehavior) {
-    val isTopAppBarMinimized = scrollBehavior.state.collapsedFraction > 0.5 // Adjust threshold as needed
+    val isTopAppBarMinimized = scrollBehavior.state.collapsedFraction > 0.5
     MediumTopAppBar(
         scrollBehavior = scrollBehavior,
         colors = TopAppBarDefaults.topAppBarColors(
@@ -80,7 +105,7 @@ private fun MyTopAppBar(scrollBehavior: TopAppBarScrollBehavior) {
         actions = {
             FilledIconButton(
                 onClick = { /* do something */ },
-                modifier = Modifier.size(Dimens.IconSizeLarge), // Changed from 32.dp
+                modifier = Modifier.size(Dimens.IconSizeLarge),
                 shape = IconButtonDefaults.filledShape,
                 colors = IconButtonDefaults.filledIconButtonColors(
                     containerColor = MaterialTheme.colorScheme.surfaceContainer,
@@ -93,12 +118,12 @@ private fun MyTopAppBar(scrollBehavior: TopAppBarScrollBehavior) {
                     modifier = Modifier.size(Dimens.IconSizeSmall),
                 )
             }
-            Spacer(Modifier.size(Dimens.PaddingSmall)) // Changed from 8.dp
+            Spacer(Modifier.size(Dimens.PaddingSmall))
             FilledTonalIconButton(
                 onClick = { /* doSomething() */ },
                 modifier = Modifier
-                    .width(Dimens.IconSizeExtraLarge) // Changed from 48.dp
-                    .height(Dimens.IconSizeLarge), // Changed from 32.dp
+                    .width(Dimens.IconSizeExtraLarge)
+                    .height(Dimens.IconSizeLarge),
                 shape = IconButtonDefaults.filledShape
             ) {
                 Icon(
@@ -114,54 +139,59 @@ private fun MyTopAppBar(scrollBehavior: TopAppBarScrollBehavior) {
 
 @Composable
 private fun ScrollContent(
-    innerPadding: PaddingValues
+    innerPadding: PaddingValues,
+    isNotificationsEnabled: Boolean,
+    isDarkModeEnabled: Boolean,
+    onNotificationsToggle: (Boolean) -> Unit,
+    onDarkModeToggle: (Boolean) -> Unit
 ) {
-    // Sample data for your list
+    var dialogState by remember { mutableStateOf<String?>(null) }
+
     val items = listOf(
         StandardListItemModel(
             "1",
             Icons.Rounded.Notifications,
             "Notifications",
             "Manage your alerts and sounds.",
-            Icons.AutoMirrored.Rounded.ArrowForward
+            Icons.AutoMirrored.Rounded.ArrowForward,
+            onClick = { dialogState = "notifications" }
         ),
         StandardListItemModel(
             "2",
-            Icons.Rounded.DarkMode, // Common icon for theme settings
-            "Theme",
+            Icons.Rounded.DarkMode,
+            "Dark mode",
             "Change the app's appearance.",
-            Icons.AutoMirrored.Rounded.ArrowForward
+            Icons.AutoMirrored.Rounded.ArrowForward,
+            onClick = { dialogState = "darkmode" }
         ),
         StandardListItemModel(
             "3",
-            Icons.Rounded.Language, // Standard icon for language settings
+            Icons.Rounded.Language,
             "Language",
             "Select your preferred language.",
-            Icons.AutoMirrored.Rounded.ArrowForward
+            Icons.AutoMirrored.Rounded.ArrowForward,
+            onClick = { /* Handle click for "Language" */ }
         ),
         StandardListItemModel(
             "4",
-            Icons.Rounded.SettingsBackupRestore, // Icon suggesting a reset
+            Icons.Rounded.SettingsBackupRestore,
             "Reset Settings",
             "Revert all settings to their default values.",
-            Icons.AutoMirrored.Rounded.ArrowForward
+            Icons.AutoMirrored.Rounded.ArrowForward,
+            onClick = { /* Handle click for "Reset Settings" */ }
         ),
         StandardListItemModel(
             "5",
             Icons.Outlined.Info,
             "About App",
             "View app information and version.",
-            Icons.AutoMirrored.Rounded.ArrowForward
+            Icons.AutoMirrored.Rounded.ArrowForward,
+            onClick = { /* Handle click for "About App" */ }
         )
     )
 
     Column(
-        modifier = Modifier
-            .padding(
-                top = innerPadding.calculateTopPadding() - Dimens.PaddingLarge,
-                bottom = innerPadding.calculateBottomPadding()
-            ) // Apply innerPadding to the whole column
-            .fillMaxWidth()
+        modifier = Modifier.padding(innerPadding).fillMaxWidth()
     ) {
         Spacer(modifier = Modifier.height(Dimens.SpacerLarge))
 
@@ -175,4 +205,90 @@ private fun ScrollContent(
             }
         }
     }
+
+    when (dialogState) {
+        "notifications" -> {
+            SettingsSelectionDialog(
+                title = "Notifications",
+                options = listOf("On", "Off"),
+                selectedOption = if (isNotificationsEnabled) "On" else "Off",
+                onOptionSelected = {
+                    val isEnabled = it == "On"
+                    onNotificationsToggle(isEnabled)
+                    dialogState = null
+                },
+                onDismiss = { dialogState = null }
+            )
+        }
+        "darkmode" -> {
+            SettingsSelectionDialog(
+                title = "Dark mode",
+                options = listOf("Light", "Dark"),
+                selectedOption = if (isDarkModeEnabled) "Dark" else "Light",
+                onOptionSelected = {
+                    val isEnabled = it == "Dark"
+                    onDarkModeToggle(isEnabled)
+                    dialogState = null
+                },
+                onDismiss = { dialogState = null }
+            )
+        }
+    }
 }
+
+@Composable
+private fun SettingsSelectionDialog(
+    title: String,
+    options: List<String>,
+    selectedOption: String,
+    onOptionSelected: (String) -> Unit,
+    onDismiss: () -> Unit
+) {
+    val (tempSelected, onOptionClick) = remember { mutableStateOf(selectedOption) }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(text = title) },
+        text = {
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                verticalArrangement = Arrangement.spacedBy(Dimens.PaddingMedium)
+            ) {
+                options.forEach { option ->
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(MaterialTheme.shapes.small)
+                            .selectable(
+                                selected = (option == tempSelected),
+                                onClick = { onOptionClick(option) },
+                            ),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        RadioButton(
+                            selected = (option == tempSelected),
+                            onClick = null
+                        )
+                        Spacer(modifier = Modifier.width(Dimens.PaddingMedium))
+                        Text(text = option)
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(
+                onClick = {
+                    onOptionSelected(tempSelected)
+                }
+            ) {
+                Text("OK")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Cancel")
+            }
+        }
+    )
+}
+

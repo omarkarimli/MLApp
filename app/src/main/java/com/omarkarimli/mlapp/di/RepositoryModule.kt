@@ -8,6 +8,7 @@ import com.omarkarimli.mlapp.data.repository.PermissionRepositoryImpl
 import com.omarkarimli.mlapp.data.repository.RoomRepositoryImpl
 import com.omarkarimli.mlapp.data.repository.SharedPreferenceRepositoryImpl
 import com.omarkarimli.mlapp.data.repository.TextRecognitionRepositoryImpl
+import com.omarkarimli.mlapp.data.repository.ThemeRepositoryImpl
 import com.omarkarimli.mlapp.domain.repository.BarcodeScanningRepository
 import com.omarkarimli.mlapp.domain.repository.FaceMeshDetectionRepository
 import com.omarkarimli.mlapp.domain.repository.ImageLabelingRepository
@@ -16,6 +17,7 @@ import com.omarkarimli.mlapp.domain.repository.PermissionRepository
 import com.omarkarimli.mlapp.domain.repository.RoomRepository
 import com.omarkarimli.mlapp.domain.repository.SharedPreferenceRepository
 import com.omarkarimli.mlapp.domain.repository.TextRecognitionRepository
+import com.omarkarimli.mlapp.domain.repository.ThemeRepository
 import dagger.Binds
 import dagger.Module
 import dagger.hilt.InstallIn
@@ -73,4 +75,10 @@ abstract class RepositoryModule {
     abstract fun bindSharedPreferenceRepository(
         sharedPreferenceRepositoryImpl: SharedPreferenceRepositoryImpl
     ): SharedPreferenceRepository
+
+    @Binds
+    @Singleton
+    abstract fun bindThemeRepository(
+        themeRepositoryImpl: ThemeRepositoryImpl
+    ): ThemeRepository
 }

@@ -56,12 +56,10 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.tooling.preview.Preview
 import com.omarkarimli.mlapp.R
 import com.omarkarimli.mlapp.domain.models.StandardListItemModel
 import com.omarkarimli.mlapp.ui.navigation.Screen
 import com.omarkarimli.mlapp.ui.presentation.common.widget.StandardListItemUi
-import com.omarkarimli.mlapp.ui.theme.MLAppTheme
 import com.omarkarimli.mlapp.utils.Dimens
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.omarkarimli.mlapp.domain.models.ResultCardModel
@@ -332,28 +330,6 @@ private fun RecentlySaved(filteredSavedResults: List<ResultCardModel>) {
                     OriginalResultCard(resultCard)
                 }
             }
-        }
-    }
-}
-
-@Preview(showBackground = true)
-@Composable
-fun HomePreview() {
-    MLAppTheme {
-        Column {
-            MyTopAppBar(scrollBehavior = TopAppBarDefaults.enterAlwaysScrollBehavior(rememberTopAppBarState()), items = emptyList())
-            ScrollContent(
-                innerPadding = PaddingValues(),
-                items = listOf(
-                    StandardListItemModel("1", Icons.Rounded.TextFields, "Text", "Desc", Icons.AutoMirrored.Rounded.ArrowForward, onClick = {}),
-                    StandardListItemModel("2", Icons.Rounded.Face, "Face", "Desc", Icons.AutoMirrored.Rounded.ArrowForward, onClick = {})
-                ),
-                savedResults = listOf(
-                    ResultCardModel(id = 1, title = "Saved Barcode 1", subtitle = "EAN-13", imageUri = null),
-                    ResultCardModel(id = 2, title = "Saved QR Code", subtitle = "URL: example.com", imageUri = null),
-                    ResultCardModel(id = 3, title = "Saved Image Label", subtitle = "Cat, Animal", imageUri = null)
-                )
-            )
         }
     }
 }

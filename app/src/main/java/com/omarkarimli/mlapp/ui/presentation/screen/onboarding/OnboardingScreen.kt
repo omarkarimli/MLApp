@@ -38,11 +38,9 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.navigation.NavHostController
 import com.omarkarimli.mlapp.R
 import com.omarkarimli.mlapp.ui.navigation.LocalNavController
-import com.omarkarimli.mlapp.ui.theme.MLAppTheme
 import com.omarkarimli.mlapp.ui.navigation.Screen
 import com.omarkarimli.mlapp.utils.Dimens
 import kotlinx.coroutines.launch
@@ -52,14 +50,6 @@ import java.util.Locale
 fun OnboardingScreen() {
     Scaffold { innerPadding ->
         ScrollContent(innerPadding)
-    }
-}
-
-@Preview(showBackground = true)
-@Composable
-fun OnboardingPreview() {
-    MLAppTheme {
-        OnboardingScreen()
     }
 }
 
