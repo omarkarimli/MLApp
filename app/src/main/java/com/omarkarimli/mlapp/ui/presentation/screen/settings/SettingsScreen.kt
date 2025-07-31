@@ -53,12 +53,15 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.omarkarimli.mlapp.domain.models.StandardListItemModel
+import com.omarkarimli.mlapp.ui.navigation.LocalNavController
+import com.omarkarimli.mlapp.ui.navigation.Screen
 import com.omarkarimli.mlapp.ui.presentation.common.widget.StandardListItemUi
 import com.omarkarimli.mlapp.ui.presentation.main.MainViewModel
 import com.omarkarimli.mlapp.utils.Constants
 import com.omarkarimli.mlapp.utils.Dimens
 import com.omarkarimli.mlapp.utils.copyToClipboard
 import com.omarkarimli.mlapp.utils.getVersionNumber
+import com.omarkarimli.mlapp.utils.openUrl
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -73,7 +76,7 @@ fun SettingsScreen(mainViewModel: MainViewModel) {
     Scaffold(
         modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
         topBar = {
-            MyTopAppBar(scrollBehavior)
+            MyTopAppBar(scrollBehavior, context)
         }
     ) { innerPadding ->
         ScrollContent(
@@ -91,7 +94,9 @@ fun SettingsScreen(mainViewModel: MainViewModel) {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun MyTopAppBar(scrollBehavior: TopAppBarScrollBehavior) {
+private fun MyTopAppBar(scrollBehavior: TopAppBarScrollBehavior, context: Context) {
+    val navController = LocalNavController.current
+
     val isTopAppBarMinimized = scrollBehavior.state.collapsedFraction > 0.5
     MediumTopAppBar(
         scrollBehavior = scrollBehavior,
@@ -102,7 +107,7 @@ private fun MyTopAppBar(scrollBehavior: TopAppBarScrollBehavior) {
         ),
         title = {
             Text(
-                "Settings",
+                Screen.Settings.title,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
                 style = if (isTopAppBarMinimized) MaterialTheme.typography.headlineSmall else MaterialTheme.typography.headlineMedium,
@@ -112,7 +117,7 @@ private fun MyTopAppBar(scrollBehavior: TopAppBarScrollBehavior) {
         },
         actions = {
             FilledIconButton(
-                onClick = { /* do something */ },
+                onClick = { context.openUrl(Constants.HELP_URL) },
                 modifier = Modifier.size(Dimens.IconSizeLarge),
                 shape = IconButtonDefaults.filledShape,
                 colors = IconButtonDefaults.filledIconButtonColors(
@@ -128,7 +133,7 @@ private fun MyTopAppBar(scrollBehavior: TopAppBarScrollBehavior) {
             }
             Spacer(Modifier.size(Dimens.PaddingSmall))
             FilledTonalIconButton(
-                onClick = { /* doSomething() */ },
+                onClick = { navController.navigate(Screen.Profile.route) },
                 modifier = Modifier
                     .width(Dimens.IconSizeExtraLarge)
                     .height(Dimens.IconSizeLarge),

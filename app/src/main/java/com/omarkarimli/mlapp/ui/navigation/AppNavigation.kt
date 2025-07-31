@@ -36,6 +36,7 @@ import com.omarkarimli.mlapp.ui.presentation.screen.onboarding.OnboardingScreen
 import com.omarkarimli.mlapp.ui.presentation.screen.settings.SettingsScreen
 import com.omarkarimli.mlapp.ui.presentation.screen.splash.SplashScreen
 import com.omarkarimli.mlapp.ui.presentation.screen.barcodescanning.BarcodeScanningScreen
+import com.omarkarimli.mlapp.ui.presentation.screen.profile.ProfileScreen
 import com.omarkarimli.mlapp.ui.presentation.screen.textrecognition.TextRecognitionScreen
 
 sealed class BottomBarDestination(
@@ -130,6 +131,9 @@ fun AppNavigation(mainViewModel: MainViewModel) {
                 composable(Screen.Settings.route) {
                     SettingsScreen(mainViewModel)
                 }
+                composable(Screen.Profile.route) {
+                    ProfileScreen()
+                }
                 composable(Screen.BarcodeScanning.route) {
                     BarcodeScanningScreen()
                 }
@@ -154,6 +158,7 @@ sealed class Screen(val route: String, val title: String) {
     data object Home : Screen("home", "Home")
     data object Bookmarks : Screen("bookmarks", "Bookmarks")
     data object Settings : Screen("settings", "Settings")
+    data object Profile : Screen("profile", "Profile")
     data object Onboarding: Screen("onboarding", "Onboarding")
     data object Login: Screen("login", "Login")
     data object Splash: Screen("splash", "Splash")

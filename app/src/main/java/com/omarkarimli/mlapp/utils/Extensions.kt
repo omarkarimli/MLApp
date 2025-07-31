@@ -1,9 +1,12 @@
 package com.omarkarimli.mlapp.utils
 
+import android.content.ActivityNotFoundException
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
+import android.content.Intent
 import android.content.res.Configuration
+import android.util.Log
 import android.widget.Toast
 import com.google.mlkit.vision.barcode.common.Barcode
 import com.omarkarimli.mlapp.domain.models.ImageLabelResult
@@ -12,6 +15,7 @@ import com.omarkarimli.mlapp.domain.models.ResultCardModel
 import com.omarkarimli.mlapp.domain.models.ScannedBarcode
 import com.omarkarimli.mlapp.domain.models.ScannedFaceMesh
 import com.omarkarimli.mlapp.domain.models.ScannedObject
+import androidx.core.net.toUri
 
 // Toast
 fun Context.showToast(message: String) {
@@ -24,13 +28,23 @@ fun Context.copyToClipboard(text: String) {
 
     // Create a new ClipData object.
     // The label is a user-visible description of the clip's content.
-    val clipData = ClipData.newPlainText("text_label", text)
+    val clipData = ClipData.newPlainText(Constants.CLIPBOARD_LABEL, text)
 
     // Set the clip data to the clipboard.
     clipboardManager.setPrimaryClip(clipData)
 
     // Toast
     this.showToast("Copied to clipboard")
+}
+
+fun Context.openUrl(url: String) {
+    val intent = Intent(Intent.ACTION_VIEW, url.toUri())
+    try {
+        this.startActivity(intent)
+    } catch (e: ActivityNotFoundException) {
+        Log.e("openUrl", "Error opening URL: $e")
+        this.showToast("Something went wrong")
+    }
 }
 
 fun Context.getVersionNumber(): String {

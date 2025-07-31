@@ -13,7 +13,7 @@ import androidx.compose.ui.graphics.Color
 import com.omarkarimli.mlapp.utils.Dimens
 
 @Composable
-fun MyTextField(label: String, helper: String, value: String, onValueChange: (String) -> Unit) {
+fun MyTextField(label: String, helper: String, value: String, onValueChange: (String) -> Unit = {}) {
     Text(
         label,
         style = MaterialTheme.typography.titleMedium,

@@ -22,23 +22,19 @@ class LoginViewModel @Inject constructor(
     val uiState: StateFlow<UiState> = _uiState.asStateFlow()
 
     fun onContinue(bioText: String, websiteText: String, isSystemInDarkTheme: Boolean) {
-        if (bioText.trim().isNotEmpty() && websiteText.trim().isNotEmpty()) {
-            viewModelScope.launch {
-                _uiState.value = UiState.Loading
+        viewModelScope.launch {
+            _uiState.value = UiState.Loading
 
-                sharedPreferenceRepository.saveString(Constants.BIO, bioText)
-                sharedPreferenceRepository.saveString(Constants.WEBSITE, websiteText)
-                sharedPreferenceRepository.saveBoolean(Constants.LOGIN_KEY, true)
-                sharedPreferenceRepository.saveBoolean(Constants.NOTIFICATION_KEY, false)
-                sharedPreferenceRepository.saveBoolean(Constants.DARK_MODE, isSystemInDarkTheme)
+            sharedPreferenceRepository.saveString(Constants.BIO, bioText)
+            sharedPreferenceRepository.saveString(Constants.WEBSITE, websiteText)
+            sharedPreferenceRepository.saveBoolean(Constants.LOGIN_KEY, true)
+            sharedPreferenceRepository.saveBoolean(Constants.NOTIFICATION_KEY, false)
+            sharedPreferenceRepository.saveBoolean(Constants.DARK_MODE, isSystemInDarkTheme)
 
-                Log.e("LoginViewModel", "LOGIN KEY: " + sharedPreferenceRepository.getBoolean(
-                    Constants.LOGIN_KEY, false).toString())
+            Log.e("LoginViewModel", "LOGIN KEY: " + sharedPreferenceRepository.getBoolean(
+                Constants.LOGIN_KEY, false).toString())
 
-                _uiState.value = UiState.Success("Logged in successfully")
-            }
-        } else {
-            _uiState.value = UiState.Error("Fill gaps")
+            _uiState.value = UiState.Success("Logged in successfully")
         }
     }
 
