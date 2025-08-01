@@ -61,13 +61,9 @@ private fun ScrollContent(
     val navController = LocalNavController.current
 
     val onboardingPages = listOf(
-        OnboardingPageModel(
-            R.drawable.i1,
-            "Welcome to ${stringResource(id = R.string.app_name)}!",
-            "Share and collaborate with friends and family."
-        ),
-        OnboardingPageModel(R.drawable.i2, "Collaborate with ease.", "Easily share, collab with friends & family."),
-        OnboardingPageModel(R.drawable.i3, "Stay\norganized.", "Use AI to detect contents, workflows.")
+        OnboardingPageModel(R.drawable.i1, "Welcome to ${stringResource(id = R.string.app_name)}!", "Intelligent tools for your daily tasks."),
+        OnboardingPageModel(R.drawable.i2, "Scan and understand.", "Instantly recognize text, objects, and more."),
+        OnboardingPageModel(R.drawable.i3, "Stay smarter.", "AI-powered tags to keep everything in its place.")
     )
 
     val pagerState = rememberPagerState(pageCount = {
