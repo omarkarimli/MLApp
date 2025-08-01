@@ -24,18 +24,18 @@ class FaceMeshDetectionRepositoryImpl @Inject constructor(
         val image = InputImage.fromMediaImage(mediaImage, imageProxy.imageInfo.rotationDegrees)
 
         return try {
-            val detectedFaceMeshes = faceMeshDetector.process(image).await() // Use .await() here
+            val detectedFaceMeshes = faceMeshDetector.process(image).await()
             Result.success(detectedFaceMeshes)
         } catch (e: Exception) {
             Result.failure(e)
         } finally {
-            imageProxy.close() // Ensure imageProxy is closed
+            imageProxy.close()
         }
     }
 
     override suspend fun scanStaticImage(inputImage: InputImage): Result<List<FaceMesh>> {
         return try {
-            val detectedFaceMeshes = faceMeshDetector.process(inputImage).await() // Use .await() here
+            val detectedFaceMeshes = faceMeshDetector.process(inputImage).await()
 
             if (detectedFaceMeshes.isEmpty()) {
                 Log.d("FaceMeshDetectionRepo", "No facemesh found")

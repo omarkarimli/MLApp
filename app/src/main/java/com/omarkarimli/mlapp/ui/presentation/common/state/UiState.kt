@@ -8,5 +8,5 @@ sealed class UiState {
 
     data class PermissionAction(val permission: String) : UiState()
 
-    // Add other common UI states as needed, e.g., Success, Dialog, etc.
+    // Add other common UI states as needed, e.g., Dialog, etc.
 }

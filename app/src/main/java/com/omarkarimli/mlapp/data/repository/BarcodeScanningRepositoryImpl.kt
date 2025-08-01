@@ -23,18 +23,18 @@ class BarcodeScanningRepositoryImpl @Inject constructor(
         val image = InputImage.fromMediaImage(mediaImage, imageProxy.imageInfo.rotationDegrees)
 
         return try {
-            val barcodes = scanner.process(image).await() // Use .await() here
+            val barcodes = scanner.process(image).await()
             Result.success(barcodes)
         } catch (e: Exception) {
             Result.failure(e)
         } finally {
-            imageProxy.close() // Ensure imageProxy is closed
+            imageProxy.close()
         }
     }
 
     override suspend fun scanStaticImage(inputImage: InputImage): Result<List<Barcode>> {
         return try {
-            val barcodes = scanner.process(inputImage).await() // Use .await() here
+            val barcodes = scanner.process(inputImage).await()
 
             if (barcodes.isEmpty()) {
                 return Result.failure(RuntimeException("No barcodes found"))

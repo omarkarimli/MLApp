@@ -5,5 +5,5 @@ import com.google.mlkit.vision.label.ImageLabel
 
 data class ImageLabelResult(
     val label: ImageLabel,
-    val imageUri: Uri? = null // Nullable for live scans
+    val imageUri: Uri? = null
 )

@@ -91,15 +91,11 @@ fun AppNavigation(mainViewModel: MainViewModel) {
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route
 
-    // State to control the visibility of the bottom bar
     var showBottomBar by remember { mutableStateOf(false) }
 
-    // Use a LaunchedEffect to introduce a delay before showing the bottom bar
-    // This runs once when the composable is first launched and when currentRoute changes
     LaunchedEffect(currentRoute) {
         val destinationIsBottomBar = bottomBarDestinations.any { it.route == currentRoute }
         if (destinationIsBottomBar) {
-            // Set a delay of 500ms before showing the bottom bar
             delay(500L)
             showBottomBar = true
         } else {
@@ -109,7 +105,6 @@ fun AppNavigation(mainViewModel: MainViewModel) {
 
     Scaffold(
         bottomBar = {
-            // AnimatedVisibility for slide-in/slide-out animations
             AnimatedVisibility(
                 visible = showBottomBar,
                 enter = slideInVertically(

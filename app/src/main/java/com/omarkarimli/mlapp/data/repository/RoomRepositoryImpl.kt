@@ -23,11 +23,10 @@ class RoomRepositoryImpl @Inject constructor(
     override fun getPaginatedSavedResultCards(searchQuery: String): Flow<PagingData<ResultCardModel>> {
         return Pager(
             config = PagingConfig(
-                pageSize = Constants.MAX_PAGE_CHILD_COUNT, // Number of items per page
-                enablePlaceholders = true, // Shows placeholders while loading
-                initialLoadSize = Constants.MAX_PAGE_CHILD_COUNT // Initial items loaded
+                pageSize = Constants.MAX_PAGE_CHILD_COUNT,
+                enablePlaceholders = true,
+                initialLoadSize = Constants.MAX_PAGE_CHILD_COUNT
             ),
-            // Pass the searchQuery to the PagingSource factory
             pagingSourceFactory = { resultCardDao.getPaginatedResultCardsPagingSource(searchQuery) }
         ).flow
     }

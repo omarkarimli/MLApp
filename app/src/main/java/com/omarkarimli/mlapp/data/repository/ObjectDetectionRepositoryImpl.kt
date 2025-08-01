@@ -23,18 +23,18 @@ class ObjectDetectionRepositoryImpl @Inject constructor(
         val image = InputImage.fromMediaImage(mediaImage, imageProxy.imageInfo.rotationDegrees)
 
         return try {
-            val detectedObjects = objectDetector.process(image).await() // Use .await() here
+            val detectedObjects = objectDetector.process(image).await()
             Result.success(detectedObjects)
         } catch (e: Exception) {
             Result.failure(e)
         } finally {
-            imageProxy.close() // Ensure imageProxy is closed
+            imageProxy.close()
         }
     }
 
     override suspend fun scanStaticImage(inputImage: InputImage): Result<List<DetectedObject>> {
         return try {
-            val detectedObjects = objectDetector.process(inputImage).await() // Use .await() here
+            val detectedObjects = objectDetector.process(inputImage).await()
 
             if (detectedObjects.isEmpty()) {
                 return Result.failure(RuntimeException("No objects found"))

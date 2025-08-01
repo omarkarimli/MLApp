@@ -5,5 +5,5 @@ import com.google.mlkit.vision.facemesh.FaceMesh
 
 data class ScannedFaceMesh(
     val faceMesh: FaceMesh,
-    val imageUri: Uri? = null // Nullable for live scans
+    val imageUri: Uri? = null
 )

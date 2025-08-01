@@ -38,7 +38,7 @@ fun CameraPermissionPlaceholder(
                 textAlign = TextAlign.Center,
                 style = MaterialTheme.typography.bodyLarge
             )
-            Spacer(modifier = Modifier.height(Dimens.SpacerMedium)) // Add some space
+            Spacer(modifier = Modifier.height(Dimens.SpacerMedium))
             Button(
                 onClick = { onPermissionRequested.invoke() },
                 colors = ButtonDefaults.buttonColors(

@@ -15,17 +15,14 @@ class TextRecognitionRepositoryImpl @Inject constructor(
 ) : TextRecognitionRepository {
 
     override suspend fun scanLive(imageProxy: ImageProxy): Result<String> {
-        // Ensure the media image is available from the ImageProxy
         val mediaImage = imageProxy.image ?: run {
-            imageProxy.close() // Close the ImageProxy if mediaImage is null
+            imageProxy.close()
             return Result.failure(IllegalStateException("Media image is null"))
         }
 
-        // Create an InputImage from the media image and its rotation degrees
         val image = InputImage.fromMediaImage(mediaImage, imageProxy.imageInfo.rotationDegrees)
 
         return try {
-            // Process the image with the TextRecognizer and await the result
             val recognizedText = recognizer.process(image).await().text
 
             if (recognizedText.trim().isNotEmpty()) {
@@ -34,27 +31,22 @@ class TextRecognitionRepositoryImpl @Inject constructor(
                 Result.failure(RuntimeException(""))
             }
         } catch (e: Exception) {
-            // Return a failure Result if any exception occurs during processing
             Result.failure(e)
         } finally {
-            // Ensure the ImageProxy is always closed to release resources
             imageProxy.close()
         }
     }
 
     override suspend fun scanStaticImage(inputImage: InputImage): Result<String> {
         return try {
-            // Process the static InputImage with the TextRecognizer and await the result
             val recognizedText = recognizer.process(inputImage).await().text
 
-            // You might want to add a check for empty text if it's considered a failure case
             if (recognizedText.trim().isNotEmpty()) {
                 Result.success(recognizedText)
             } else {
                 Result.failure(RuntimeException("No text found"))
             }
         } catch (e: Exception) {
-            // Return a failure Result if any exception occurs during processing
             Result.failure(e)
         }
     }

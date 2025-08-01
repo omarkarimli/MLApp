@@ -8,7 +8,6 @@ interface RoomRepository {
     suspend fun deleteSavedResult(id: Int)
     suspend fun saveResultCard(resultCard: ResultCardModel)
 
-    // Updated signature to include searchQuery
     fun getPaginatedSavedResultCards(searchQuery: String): Flow<PagingData<ResultCardModel>>
 
     suspend fun clearAllSavedResults()
