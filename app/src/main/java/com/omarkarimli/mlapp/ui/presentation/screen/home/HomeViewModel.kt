@@ -21,6 +21,6 @@ class HomeViewModel @Inject constructor(
             .stateIn(
                 scope = viewModelScope,
                 started = SharingStarted.WhileSubscribed(5000), // Keep collecting for 5 seconds after last observer
-                initialValue = emptyList() // Initial empty list
+                initialValue = emptyList()
             )
 }

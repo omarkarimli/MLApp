@@ -73,7 +73,7 @@ fun StandardListItemUi(
             Spacer(modifier = Modifier.width(Dimens.SpacerMedium))
             Icon(
                 imageVector = item.endingIcon,
-                contentDescription = null, // Or provide a meaningful description
+                contentDescription = null,
                 modifier = Modifier.size(Dimens.IconSizeMedium)
             )
         }

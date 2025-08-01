@@ -40,6 +40,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.navigation.NavHostController
 import com.omarkarimli.mlapp.R
+import com.omarkarimli.mlapp.domain.models.OnboardingPageModel
 import com.omarkarimli.mlapp.ui.navigation.LocalNavController
 import com.omarkarimli.mlapp.ui.navigation.Screen
 import com.omarkarimli.mlapp.utils.Dimens
@@ -60,9 +61,13 @@ private fun ScrollContent(
     val navController = LocalNavController.current
 
     val onboardingPages = listOf(
-        OnboardingPageData(R.drawable.i1, "Welcome to ${stringResource(id = R.string.app_name)}!", "Share and collaborate with friends and family."),
-        OnboardingPageData(R.drawable.i2, "Collaborate with ease.", "Easily share, collab with friends & family."),
-        OnboardingPageData(R.drawable.i3, "Stay\norganized.", "Use AI to detect contents, workflows.")
+        OnboardingPageModel(
+            R.drawable.i1,
+            "Welcome to ${stringResource(id = R.string.app_name)}!",
+            "Share and collaborate with friends and family."
+        ),
+        OnboardingPageModel(R.drawable.i2, "Collaborate with ease.", "Easily share, collab with friends & family."),
+        OnboardingPageModel(R.drawable.i3, "Stay\norganized.", "Use AI to detect contents, workflows.")
     )
 
     val pagerState = rememberPagerState(pageCount = {
@@ -73,7 +78,6 @@ private fun ScrollContent(
         modifier = Modifier
             .fillMaxSize()
     ) {
-        // Use Dimens for vertical spacing
         Spacer(modifier = Modifier.height(innerPadding.calculateTopPadding() + Dimens.PaddingSmall))
         DotsIndicator(pagerState)
         Column(
@@ -89,36 +93,36 @@ private fun ScrollContent(
                 Column(
                     modifier = Modifier
                         .fillMaxSize()
-                        .padding(horizontal = Dimens.PaddingMedium) // Use Dimens for horizontal padding
+                        .padding(horizontal = Dimens.PaddingMedium)
                         .verticalScroll(rememberScrollState()),
                     horizontalAlignment = Alignment.Start
                 ) {
-                    Spacer(modifier = Modifier.height(Dimens.SpacerHeightExtraLarge)) // Use Dimens for top spacer
+                    Spacer(modifier = Modifier.height(Dimens.SpacerHeightExtraLarge))
                     Text(
                         text = onboardingPages[page].title,
                         style = MaterialTheme.typography.displayMedium,
                         lineHeight = Dimens.LineHeightDisplayMedium
                     )
-                    Spacer(modifier = Modifier.height(Dimens.SpacerHeightMedium)) // Use Dimens for spacer
+                    Spacer(modifier = Modifier.height(Dimens.SpacerHeightMedium))
                     Image(
                         painter = painterResource(id = onboardingPages[page].imageResId),
                         contentDescription = onboardingPages[page].title,
                         contentScale = ContentScale.Crop,
                         modifier = Modifier
                             .fillMaxWidth()
-                            .height(Dimens.OnboardingImageHeight) // Use Dimens for image height
-                            .clip(RoundedCornerShape(Dimens.CornerRadiusLarge)) // Use Dimens for corner radius
+                            .height(Dimens.OnboardingImageHeight)
+                            .clip(RoundedCornerShape(Dimens.CornerRadiusLarge))
                             .align(Alignment.CenterHorizontally)
                     )
-                    Spacer(modifier = Modifier.height(Dimens.SpacerHeightLarge)) // Use Dimens for spacer
+                    Spacer(modifier = Modifier.height(Dimens.SpacerHeightLarge))
                     Text(
                         text = onboardingPages[page].description,
                         style = MaterialTheme.typography.headlineSmall,
                         fontWeight = FontWeight.Normal,
-                        lineHeight = Dimens.LineHeightHeadlineMedium, // Use Dimens for line height
-                        modifier = Modifier.padding(end = Dimens.PaddingMedium) // Use Dimens for padding
+                        lineHeight = Dimens.LineHeightHeadlineMedium,
+                        modifier = Modifier.padding(end = Dimens.PaddingMedium)
                     )
-                    Spacer(modifier = Modifier.height(Dimens.SpacerHeightLarge)) // Use Dimens for spacer
+                    Spacer(modifier = Modifier.height(Dimens.SpacerHeightLarge))
                 }
             }
 
@@ -135,7 +139,7 @@ private fun ScrollContent(
 fun BottomButton(
     state: PagerState,
     navController: NavHostController,
-    onboardingPages: List<OnboardingPageData>
+    onboardingPages: List<OnboardingPageModel>
 ) {
     val isLastPage = (state.currentPage == onboardingPages.size - 1)
     val coroutineScope = rememberCoroutineScope()
@@ -156,9 +160,9 @@ fun BottomButton(
             onClick = { onButtonClick.invoke() },
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = Dimens.PaddingMedium) // Use Dimens for horizontal padding
-                .height(Dimens.ButtonHeight), // Use Dimens for button height
-            shape = RoundedCornerShape(Dimens.CornerRadiusLarge), // Use Dimens for corner radius
+                .padding(horizontal = Dimens.PaddingMedium)
+                .height(Dimens.ButtonHeight),
+            shape = RoundedCornerShape(Dimens.CornerRadiusLarge),
             colors = ButtonDefaults.buttonColors(
                 containerColor = MaterialTheme.colorScheme.onSurface,
                 contentColor = MaterialTheme.colorScheme.surface
@@ -167,13 +171,13 @@ fun BottomButton(
             val text = if (isLastPage) "Get Started" else "Continue"
             Text(
                 text = text.uppercase(Locale.ROOT),
-                letterSpacing = Dimens.LetterSpacingButton, // Use Dimens for letter spacing
+                letterSpacing = Dimens.LetterSpacingButton,
                 style = MaterialTheme.typography.titleMedium,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
             )
         }
-        Spacer(modifier = Modifier.height(Dimens.PaddingMedium)) // Use Dimens for spacer
+        Spacer(modifier = Modifier.height(Dimens.PaddingMedium))
     }
 }
 
@@ -185,7 +189,7 @@ fun DotsIndicator(pagerState: PagerState) {
         modifier = Modifier
             .fillMaxWidth()
             .wrapContentHeight()
-            .padding(Dimens.PaddingMedium) // Use Dimens for padding
+            .padding(Dimens.PaddingMedium)
     ) {
         repeat(pagerState.pageCount) { iteration ->
             val isCurrentPage = pagerState.currentPage == iteration
@@ -200,19 +204,13 @@ fun DotsIndicator(pagerState: PagerState) {
 
             Box(
                 modifier = Modifier
-                    .padding(Dimens.DotIndicatorPadding) // Use Dimens for padding
+                    .padding(Dimens.DotIndicatorPadding)
                     .clip(CircleShape)
                     .background(color)
-                    .height(Dimens.DotIndicatorSize) // Use Dimens for dot height
+                    .height(Dimens.DotIndicatorSize)
                     .fillMaxWidth()
                     .weight(1f)
             )
         }
     }
 }
-
-data class OnboardingPageData(
-    val imageResId: Int,
-    val title: String,
-    val description: String
-)

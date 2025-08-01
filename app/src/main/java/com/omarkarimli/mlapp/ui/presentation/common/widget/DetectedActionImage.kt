@@ -60,7 +60,7 @@ fun DetectedActionImage(imageUri: Uri?) {
                 properties = DialogProperties(usePlatformDefaultWidth = false)
             ) {
                 FullscreenImageViewer(
-                    imageUri = imageUri, // Pass the Uri directly
+                    imageUri = imageUri,
                     onDismiss = { showFullscreenImage = false }
                 )
             }

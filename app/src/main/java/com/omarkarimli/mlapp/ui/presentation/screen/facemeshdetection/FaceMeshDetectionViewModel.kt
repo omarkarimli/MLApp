@@ -41,10 +41,8 @@ class FaceMeshDetectionViewModel @Inject constructor(
     val isCameraActive: StateFlow<Boolean> = _isCameraActive.asStateFlow()
 
     private val _cameraSelector = MutableStateFlow(CameraSelector.DEFAULT_BACK_CAMERA)
-    // Exposed StateFlow for observing camera selection changes.
     val cameraSelector: StateFlow<CameraSelector> = _cameraSelector.asStateFlow()
 
-    // StateFlows to observe the status of camera and storage permissions from the repository.
     val hasCameraPermission: StateFlow<Boolean> = permissionRepository.cameraPermissionState
     val hasStoragePermission: StateFlow<Boolean> = permissionRepository.storagePermissionState
 
@@ -58,18 +56,15 @@ class FaceMeshDetectionViewModel @Inject constructor(
     }
 
     fun analyzeLiveFaceMesh(imageProxy: ImageProxy) {
-        // Check for camera permission. If not granted, update UI state and close imageProxy.
         if (!hasCameraPermission.value) {
             _uiState.value = UiState.PermissionAction(Manifest.permission.CAMERA)
-            imageProxy.close() // Crucial to close ImageProxy if not processed
+            imageProxy.close()
             return
         }
 
-        // Launch a coroutine in the viewModelScope to perform asynchronous barcode scanning.
         viewModelScope.launch {
             val result = faceMeshDetectionRepository.scanLive(imageProxy)
             result.onSuccess { detectedFaceMeshes ->
-                // Filter Previous FaceMeshes to include only those with a non-null imageUri
                 val previousStaticFaceMeshes = _faceMeshResults.value.filter { it.imageUri != null }
                 _faceMeshResults.value = previousStaticFaceMeshes + detectedFaceMeshes.map { detectedFaceMesh ->
                     ScannedFaceMesh(faceMesh = detectedFaceMesh, imageUri = null)
@@ -79,22 +74,18 @@ class FaceMeshDetectionViewModel @Inject constructor(
             }.onFailure { e ->
                 _uiState.value = UiState.Error("Live scanning failed: ${e.message}")
             }
-            // The imageProxy is closed in the repository's finally block, so no need to close here again.
         }
     }
 
     fun analyzeStaticImageForObjects(inputImage: InputImage, imageUri: Uri?) {
         _uiState.value = UiState.Loading
-        // Launch a coroutine in the viewModelScope for asynchronous static image scanning.
         viewModelScope.launch {
-            // Call the repository to scan the static image.
             val result = faceMeshDetectionRepository.scanStaticImage(inputImage)
             result.onSuccess { detectedFaceMeshes ->
                 _faceMeshResults.value = _faceMeshResults.value + detectedFaceMeshes.map { detectedFaceMesh ->
                     ScannedFaceMesh(faceMesh = detectedFaceMesh, imageUri = imageUri)
                 }
 
-                // Reset UI state to Idle after successful scanning.
                 _uiState.value = UiState.Idle
             }.onFailure { e ->
                 _uiState.value = UiState.Error(e.message.toString())
@@ -113,10 +104,6 @@ class FaceMeshDetectionViewModel @Inject constructor(
     fun toggleCameraActive() {
         if (hasCameraPermission.value) {
             _isCameraActive.value = !_isCameraActive.value
-//            // Clear live analysis results when pausing, keep static ones
-//            if (!_isCameraActive.value) {
-//                _faceMeshResults.value = _faceMeshResults.value.filter { it.imageUri != null }
-//            }
         } else {
             _uiState.value = UiState.Error("Camera permission is required to toggle camera active state.")
         }
@@ -133,7 +120,7 @@ class FaceMeshDetectionViewModel @Inject constructor(
                 resultCardsToSave.forEach { resultCard ->
                     roomRepository.saveResultCard(resultCard)
                 }
-                _uiState.value = UiState.Idle // Indicate successful save
+                _uiState.value = UiState.Idle
             } else {
                 _uiState.value = UiState.Error("Nothing to save.")
             }

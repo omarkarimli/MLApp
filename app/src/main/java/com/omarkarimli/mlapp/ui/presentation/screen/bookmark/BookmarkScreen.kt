@@ -64,16 +64,15 @@ fun BookmarkScreen() {
     val scrollBehavior = TopAppBarDefaults.enterAlwaysScrollBehavior(rememberTopAppBarState())
     val context = LocalContext.current
 
-    val savedResults = viewModel.savedResults.collectAsLazyPagingItems() // Collect PagingData
-    val searchQuery by viewModel.searchQuery.collectAsState() // Observe search query from ViewModel
+    val savedResults = viewModel.savedResults.collectAsLazyPagingItems()
+    val searchQuery by viewModel.searchQuery.collectAsState()
 
-    // State to control the visibility of the alert dialog
     var showClearAllDialog by remember { mutableStateOf(false) }
 
     val uiState by viewModel.uiState.collectAsState()
     LaunchedEffect(uiState) {
         when (uiState) {
-            UiState.Loading -> { /* Handle loading if needed */ }
+            UiState.Loading -> { }
             is UiState.Success -> {
                 val successMessage = (uiState as UiState.Success).message
                 context.showToast(successMessage)
@@ -88,8 +87,8 @@ fun BookmarkScreen() {
 
                 viewModel.resetUiState()
             }
-            is UiState.PermissionAction -> { /* Handle permission action if needed */ }
-            UiState.Idle -> { /* Hide any loading indicators */ }
+            is UiState.PermissionAction -> { }
+            UiState.Idle -> { }
         }
     }
 
@@ -98,12 +97,10 @@ fun BookmarkScreen() {
         topBar = {
             MyTopAppBar(
                 scrollBehavior = scrollBehavior,
-                // Only enable clear all if there are items to clear
                 onClearAllClicked = { if (savedResults.itemCount > 0) showClearAllDialog = true }
             )
         }
     ) { innerPadding ->
-        // Pass the PagingItems and the search query/setter
         ScrollContent(
             innerPadding = innerPadding,
             savedResults = savedResults,
@@ -206,11 +203,9 @@ private fun ScrollContent(
             verticalArrangement = Arrangement.spacedBy(Dimens.PaddingMedium),
             contentPadding = PaddingValues(Dimens.PaddingMedium)
         ) {
-            // Using items(count: Int) and manually accessing items from LazyPagingItems
             items(
                 count = savedResults.itemCount,
                 key = { index -> savedResults.peek(index)?.id ?: index }
-                // key = { index -> savedResults[index]?.id ?: PagingPlaceholderKey(index) }
             ) { index ->
                 val result = savedResults[index]
                 result?.let {
@@ -218,15 +213,14 @@ private fun ScrollContent(
                 }
             }
 
-            // Handle loading states from Paging 3
             savedResults.apply {
                 when {
                     loadState.refresh is LoadState.Loading -> {
                         item {
                             Column(
-                                modifier = Modifier.fillParentMaxSize(), // fills parent size of LazyColumn
+                                modifier = Modifier.fillParentMaxSize(),
                                 verticalArrangement = Arrangement.Center,
-                                horizontalAlignment = Alignment.CenterHorizontally // centers horizontally
+                                horizontalAlignment = Alignment.CenterHorizontally
                             ) {
                                 CircularProgressIndicator()
                             }
@@ -238,7 +232,7 @@ private fun ScrollContent(
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .padding(16.dp)
-                                    .wrapContentWidth(Alignment.CenterHorizontally) // Center horizontally in its own item
+                                    .wrapContentWidth(Alignment.CenterHorizontally)
                             )
                         }
                     }
@@ -250,17 +244,16 @@ private fun ScrollContent(
                                 text = "Error: ${error?.localizedMessage ?: "Unknown error"}",
                                 color = MaterialTheme.colorScheme.error,
                                 modifier = Modifier
-                                    .fillMaxWidth() // Fill width
+                                    .fillMaxWidth()
                                     .padding(vertical = Dimens.PaddingMedium)
-                                    .wrapContentWidth(Alignment.CenterHorizontally) // Center horizontally
+                                    .wrapContentWidth(Alignment.CenterHorizontally)
                             )
                         }
                     }
-                    // Handle empty states based on loaded items and search query
                     itemCount == 0 && loadState.refresh is LoadState.NotLoading -> {
                         item {
                             Column(
-                                modifier = Modifier.fillParentMaxSize(), // fills parent size of LazyColumn
+                                modifier = Modifier.fillParentMaxSize(),
                                 verticalArrangement = Arrangement.Center,
                                 horizontalAlignment = Alignment.CenterHorizontally
                             ) {

@@ -23,20 +23,15 @@ import javax.inject.Inject
 
 @HiltViewModel
 class ObjectDetectionViewModel @Inject constructor(
-    // Injects the PermissionRepository to manage camera and storage permissions.
     val permissionRepository: PermissionRepository,
-    // Injects the BarcodeScanningRepository to perform barcode scanning operations.
     private val objectDetectionRepository: ObjectDetectionRepository,
     private val roomRepository: RoomRepository
 ) : ViewModel() {
 
-    // MutableStateFlow to hold the current UI state (Idle, Loading, Error, PermissionAction).
     private val _uiState = MutableStateFlow<UiState>(UiState.Idle)
-    // Exposed StateFlow for observing UI state changes.
     val uiState: StateFlow<UiState> = _uiState.asStateFlow()
 
     private val _objectResults = MutableStateFlow<List<ScannedObject>>(emptyList())
-    // Exposed StateFlow for observing scanned barcode results.
     val objectResults: StateFlow<List<ScannedObject>> = _objectResults.asStateFlow()
 
     private val _imageSize = MutableStateFlow(Size(1,1))
@@ -45,12 +40,9 @@ class ObjectDetectionViewModel @Inject constructor(
     private val _isCameraActive = MutableStateFlow(false)
     val isCameraActive: StateFlow<Boolean> = _isCameraActive.asStateFlow()
 
-    // MutableStateFlow to control the active camera (front or back).
     private val _cameraSelector = MutableStateFlow(CameraSelector.DEFAULT_BACK_CAMERA)
-    // Exposed StateFlow for observing camera selection changes.
     val cameraSelector: StateFlow<CameraSelector> = _cameraSelector.asStateFlow()
 
-    // StateFlows to observe the status of camera and storage permissions from the repository.
     val hasCameraPermission: StateFlow<Boolean> = permissionRepository.cameraPermissionState
     val hasStoragePermission: StateFlow<Boolean> = permissionRepository.storagePermissionState
 
@@ -64,16 +56,13 @@ class ObjectDetectionViewModel @Inject constructor(
     }
 
     fun analyzeLiveObject(imageProxy: ImageProxy) {
-        // Check for camera permission. If not granted, update UI state and close imageProxy.
         if (!hasCameraPermission.value) {
             _uiState.value = UiState.PermissionAction(Manifest.permission.CAMERA)
-            imageProxy.close() // Crucial to close ImageProxy if not processed
+            imageProxy.close()
             return
         }
 
-        // Launch a coroutine in the viewModelScope to perform asynchronous barcode scanning.
         viewModelScope.launch {
-            // Call the repository to scan the live barcode.
             val result = objectDetectionRepository.scanLive(imageProxy)
             result.onSuccess { detectedObjects ->
                 val previousStaticObjects = _objectResults.value.filter { it.imageUri != null }
@@ -83,25 +72,20 @@ class ObjectDetectionViewModel @Inject constructor(
 
                 _imageSize.value = Size(imageProxy.width, imageProxy.height)
             }.onFailure { e ->
-                // If scanning fails, update the UI state to an error state.
                 _uiState.value = UiState.Error("Live scanning failed: ${e.message}")
             }
-            // The imageProxy is closed in the repository's finally block, so no need to close here again.
         }
     }
 
     fun analyzeStaticImageForObjects(inputImage: InputImage, imageUri: Uri?) {
         _uiState.value = UiState.Loading
-        // Launch a coroutine in the viewModelScope for asynchronous static image scanning.
         viewModelScope.launch {
-            // Call the repository to scan the static image.
             val result = objectDetectionRepository.scanStaticImage(inputImage)
             result.onSuccess { detectedObjects ->
                 _objectResults.value = _objectResults.value + detectedObjects.map { detectedObject ->
                     ScannedObject(detectedObject = detectedObject, imageUri = imageUri)
                 }.distinctBy { it.detectedObject.trackingId }
 
-                // Reset UI state to Idle after successful scanning.
                 _uiState.value = UiState.Idle
             }.onFailure { e ->
                 _uiState.value = UiState.Error(e.message.toString())
@@ -120,10 +104,6 @@ class ObjectDetectionViewModel @Inject constructor(
     fun toggleCameraActive() {
         if (hasCameraPermission.value) {
             _isCameraActive.value = !_isCameraActive.value
-//            // Clear live analysis results when pausing, keep static ones
-//            if (!_isCameraActive.value) {
-//                _faceMeshResults.value = _faceMeshResults.value.filter { it.imageUri != null }
-//            }
         } else {
             _uiState.value = UiState.Error("Camera permission is required to toggle camera active state.")
         }
@@ -140,7 +120,7 @@ class ObjectDetectionViewModel @Inject constructor(
                 resultCardsToSave.forEach { resultCard ->
                     roomRepository.saveResultCard(resultCard)
                 }
-                _uiState.value = UiState.Idle // Indicate successful save
+                _uiState.value = UiState.Idle
             } else {
                 _uiState.value = UiState.Error("Nothing to save.")
             }

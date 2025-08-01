@@ -22,18 +22,14 @@ import javax.inject.Inject
 
 @HiltViewModel
 class ImageLabelingViewModel @Inject constructor(
-    // Injects the PermissionRepository to manage camera and storage permissions.
     val permissionRepository: PermissionRepository,
     private val imageLabelingRepository: ImageLabelingRepository,
     private val roomRepository: RoomRepository
 ) : ViewModel() {
 
-    // MutableStateFlow to hold the current UI state (Idle, Loading, Error, PermissionAction).
     private val _uiState = MutableStateFlow<UiState>(UiState.Idle)
-    // Exposed StateFlow for observing UI state changes.
     val uiState: StateFlow<UiState> = _uiState.asStateFlow()
 
-    // MutableStateFlow to hold the list of scanned barcodes.
     private val _labelingResults = MutableStateFlow<List<ImageLabelResult>>(emptyList())
     val labelingResults: StateFlow<List<ImageLabelResult>> = _labelingResults.asStateFlow()
 
@@ -41,10 +37,8 @@ class ImageLabelingViewModel @Inject constructor(
     val isCameraActive: StateFlow<Boolean> = _isCameraActive.asStateFlow()
 
     private val _cameraSelector = MutableStateFlow(CameraSelector.DEFAULT_BACK_CAMERA)
-    // Exposed StateFlow for observing camera selection changes.
     val cameraSelector: StateFlow<CameraSelector> = _cameraSelector.asStateFlow()
 
-    // StateFlows to observe the status of camera and storage permissions from the repository.
     val hasCameraPermission: StateFlow<Boolean> = permissionRepository.cameraPermissionState
     val hasStoragePermission: StateFlow<Boolean> = permissionRepository.storagePermissionState
 
@@ -58,50 +52,37 @@ class ImageLabelingViewModel @Inject constructor(
     }
 
     fun analyzeLiveLabel(imageProxy: ImageProxy) {
-        // Check for camera permission. If not granted, update UI state and close imageProxy.
         if (!hasCameraPermission.value) {
             _uiState.value = UiState.PermissionAction(Manifest.permission.CAMERA)
-            imageProxy.close() // Crucial to close ImageProxy if not processed
+            imageProxy.close()
             return
         }
 
-        // Launch a coroutine in the viewModelScope to perform asynchronous barcode scanning.
         viewModelScope.launch {
-            // Call the repository to scan the live barcode.
             val result = imageLabelingRepository.scanLive(imageProxy)
             result.onSuccess { labels ->
-                // Convert ML Kit Barcode objects to custom ScannedBarcode domain models.
                 val newLabels = labels.map { label ->
-                    ImageLabelResult(label = label, imageUri = null) // imageUri is null for live scan
+                    ImageLabelResult(label = label, imageUri = null)
                 }
-                // Update the barcode results, ensuring no duplicates based on rawValue.
                 val updatedList = (_labelingResults.value + newLabels)
                 _labelingResults.value = updatedList
             }.onFailure { e ->
-                // If scanning fails, update the UI state to an error state.
                 _uiState.value = UiState.Error("Live scanning failed: ${e.message}")
             }
-            // The imageProxy is closed in the repository's finally block, so no need to close here again.
         }
     }
 
     fun analyzeStaticImageForLabels(inputImage: InputImage, imageUri: Uri?) {
         _uiState.value = UiState.Loading
-        // Launch a coroutine in the viewModelScope for asynchronous static image scanning.
         viewModelScope.launch {
-            // Call the repository to scan the static image.
             val result = imageLabelingRepository.scanStaticImage(inputImage)
             result.onSuccess { labels ->
-                // Convert ML Kit Barcode objects to custom ScannedBarcode domain models,
-                // including the imageUri for static scans.
                 val newLabels = labels.map { label ->
                     ImageLabelResult(label = label, imageUri = imageUri)
                 }
-                // Update the barcode results, ensuring no duplicates based on rawValue.
                 val updatedList = (_labelingResults.value + newLabels).distinctBy { it.imageUri }
                 _labelingResults.value = updatedList
 
-                // Reset UI state to Idle after successful scanning.
                 _uiState.value = UiState.Idle
             }.onFailure { e ->
                 _uiState.value = UiState.Error(e.message.toString())
@@ -120,10 +101,6 @@ class ImageLabelingViewModel @Inject constructor(
     fun toggleCameraActive() {
         if (hasCameraPermission.value) {
             _isCameraActive.value = !_isCameraActive.value
-//            // Clear live analysis results when pausing, keep static ones
-//            if (!_isCameraActive.value) {
-//                _faceMeshResults.value = _faceMeshResults.value.filter { it.imageUri != null }
-//            }
         } else {
             _uiState.value = UiState.Error("Camera permission is required to toggle camera active state.")
         }
@@ -140,7 +117,7 @@ class ImageLabelingViewModel @Inject constructor(
                 resultCardsToSave.forEach { resultCard ->
                     roomRepository.saveResultCard(resultCard)
                 }
-                _uiState.value = UiState.Idle // Indicate successful save
+                _uiState.value = UiState.Idle
             } else {
                 _uiState.value = UiState.Error("Nothing to save.")
             }

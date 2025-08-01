@@ -1,6 +1,5 @@
 package com.omarkarimli.mlapp.ui.presentation.screen.splash
 
-import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.omarkarimli.mlapp.domain.repository.SharedPreferenceRepository
@@ -28,9 +27,6 @@ class SplashViewModel @Inject constructor(
             delay(Dimens.splashDuration)
 
             val loginKey = sharedPreferenceRepository.getBoolean(Constants.LOGIN_KEY, false)
-
-            Log.e("SplashViewModel", "LOGIN KEY: $loginKey")
-
             _uiState.value = if (loginKey) UiState.Success("Login successful") else UiState.Error("Login failed")
         }
     }

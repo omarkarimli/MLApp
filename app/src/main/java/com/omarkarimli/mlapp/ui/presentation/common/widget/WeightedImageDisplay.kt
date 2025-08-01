@@ -31,16 +31,15 @@ fun WeightedImageDisplay(modifier: Modifier = Modifier) {
 
     val weights = remember {
         listOf(
-            Animatable(0.5f),
-            Animatable(0.5f),
+            Animatable(1f),
+            Animatable(1f),
             Animatable(1f)
         )
     }
 
-    // Initialize weights only once when the composable is first launched
     LaunchedEffect(Unit) {
-        weights[0].snapTo(0.5f)
-        weights[1].snapTo(0.5f)
+        weights[0].snapTo(1f)
+        weights[1].snapTo(1f)
         weights[2].snapTo(1f)
     }
 
@@ -53,7 +52,6 @@ fun WeightedImageDisplay(modifier: Modifier = Modifier) {
 
                 weights.forEachIndexed { index, animatableWeight ->
                     val targetWeight = if (index == currentIndex) 2f else 0.5f
-                    // Only animate if the target is different
                     if (animatableWeight.value != targetWeight) {
                         animatableWeight.animateTo(
                             targetValue = targetWeight,

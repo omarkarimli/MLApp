@@ -55,11 +55,9 @@ fun FaceMeshDetectionScreen() {
     val faceMeshResults by viewModel.faceMeshResults.collectAsState()
 
     val imageSize by viewModel.imageSize.collectAsState()
-    // State for the GraphicOverlay
     val graphicOverlay = remember { GraphicOverlayFaceMesh(context) }
 
 
-    // Observe camera active state
     val isCameraActive by viewModel.isCameraActive.collectAsState()
 
     val hasCameraPermission by viewModel.hasCameraPermission.collectAsState()
@@ -73,12 +71,11 @@ fun FaceMeshDetectionScreen() {
         graphicOverlay.clear()
         graphicOverlay.setImageSourceInfo(imageSize.width, imageSize.height)
         faceMeshResults.forEach { scannedFaceMesh ->
-            // Pass true for front camera, false for back camera
             if (scannedFaceMesh.imageUri == null) {
                 graphicOverlay.add(FaceMeshGraphic(graphicOverlay, scannedFaceMesh.faceMesh, cameraSelector == CameraSelector.DEFAULT_FRONT_CAMERA))
             }
         }
-        graphicOverlay.postInvalidate() // Request redraw for the overlay
+        graphicOverlay.postInvalidate()
     }
 
     val cameraPermissionLauncher = rememberLauncherForActivityResult(
@@ -93,21 +90,16 @@ fun FaceMeshDetectionScreen() {
 
     val pickImageLauncher = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
         uri?.let { imageUri ->
-            // --- IMPORTANT: Persist URI permission here ---
-            // Flags for read and write access, depending on what you need.
-            // For displaying, Intent.FLAG_GRANT_READ_URI_PERMISSION is sufficient.
-            val takeFlag: Int = Intent.FLAG_GRANT_READ_URI_PERMISSION // or Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION
+            val takeFlag: Int = Intent.FLAG_GRANT_READ_URI_PERMISSION
 
             try {
-                // Request persistable permission
                 context.contentResolver.takePersistableUriPermission(imageUri, takeFlag)
                 Log.d("BarcodeScreen", "Persisted URI permission for: $imageUri")
             } catch (e: SecurityException) {
                 Log.e("BarcodeScreen", "Failed to persist URI permission: ${e.message}", e)
                 context.showToast("Failed to get persistent access to the image.")
-                return@let // Exit if permission cannot be persisted
+                return@let
             }
-            // --- End of IMPORTANT section ---
 
             coroutineScope.launch(Dispatchers.IO) {
                 try {
@@ -135,9 +127,7 @@ fun FaceMeshDetectionScreen() {
     ) { isGranted ->
         viewModel.permissionRepository.notifyPermissionChanged(viewModel.permissionRepository.getStoragePermission())
         if (isGranted) {
-            // Permission granted, now launch the image picker
             coroutineScope.launch { sheetScaffoldState.bottomSheetState.partialExpand() }
-            // Ensure this is called only if granted
             pickImageLauncher.launch("image/*")
         } else {
             context.showToast("Storage permission is required to pick photos.")
@@ -147,8 +137,8 @@ fun FaceMeshDetectionScreen() {
 
     LaunchedEffect(uiState) {
         when (uiState) {
-            UiState.Loading -> { /* Handle loading if needed */ }
-            is UiState.Success -> { /* Handle success if needed */ }
+            UiState.Loading -> { }
+            is UiState.Success -> { }
             is UiState.Error -> {
                 val errorMessage = (uiState as UiState.Error).message
                 context.showToast(errorMessage)
@@ -160,7 +150,6 @@ fun FaceMeshDetectionScreen() {
                 val permissionToRequest = (uiState as UiState.PermissionAction).permission
                 when (permissionToRequest) {
                     Manifest.permission.CAMERA -> cameraPermissionLauncher.launch(Manifest.permission.CAMERA)
-                    // This is where storage permission will be handled
                     viewModel.permissionRepository.getStoragePermission() -> storagePermissionLauncher.launch(
                         viewModel.permissionRepository.getStoragePermission()
                     )
@@ -169,7 +158,6 @@ fun FaceMeshDetectionScreen() {
                 viewModel.resetUiState()
             }
             UiState.Idle -> {
-                // Hide any loading indicators
             }
         }
     }
@@ -199,7 +187,6 @@ fun FaceMeshDetectionScreen() {
                                 coroutineScope.launch { sheetScaffoldState.bottomSheetState.partialExpand() }
                                 pickImageLauncher.launch("image/*")
                             } else {
-                                // Request permission directly from the UI here
                                 storagePermissionLauncher.launch(viewModel.permissionRepository.getStoragePermission())
                             }
                         },
@@ -215,9 +202,8 @@ fun FaceMeshDetectionScreen() {
                     Spacer(Modifier.size(Dimens.SpacerSmall))
                     FilledTonalIconButton(
                         onClick = {
-                            // Call the new save function in the ViewModel
                             viewModel.saveCurrentResults()
-                            context.showToast("Results saved!") // Provide feedback
+                            context.showToast("Results saved!")
                         },
                         modifier = Modifier
                             .width(Dimens.IconSizeExtraLarge)

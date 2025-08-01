@@ -132,7 +132,7 @@ fun HomeScreen() {
 @Composable
 private fun MyTopAppBar(scrollBehavior: TopAppBarScrollBehavior, items: List<StandardListItemModel>) {
     var expanded by remember { mutableStateOf(false) }
-    val isTopAppBarMinimized = scrollBehavior.state.collapsedFraction > 0.5 // Adjust threshold as needed
+    val isTopAppBarMinimized = scrollBehavior.state.collapsedFraction > 0.5
     MediumTopAppBar(
         scrollBehavior = scrollBehavior,
         colors = TopAppBarDefaults.topAppBarColors(
@@ -235,8 +235,7 @@ private fun ScrollContent(
     Column(
         modifier = Modifier
             .padding(
-                top = innerPadding.calculateTopPadding() - Dimens.PaddingMedium,
-                bottom = innerPadding.calculateBottomPadding()
+                top = innerPadding.calculateTopPadding() - Dimens.PaddingMedium
             )
             .fillMaxWidth()
     ) {
@@ -247,11 +246,11 @@ private fun ScrollContent(
         LazyColumn(
             modifier = Modifier
                 .fillMaxWidth()
-                .weight(1f), // Give it weight to fill remaining space
+                .weight(1f),
             verticalArrangement = Arrangement.spacedBy(Dimens.PaddingSmall),
-            contentPadding = PaddingValues(horizontal = Dimens.PaddingLarge) // Apply horizontal padding here for list items
+            contentPadding = PaddingValues(horizontal = Dimens.PaddingLarge)
         ) {
-            items(filteredItems) { item -> // Use filteredItems here
+            items(filteredItems) { item ->
                 StandardListItemUi(item = item)
             }
 
@@ -274,7 +273,7 @@ private fun RecentlySaved(filteredSavedResults: List<ResultCardModel>) {
             style = MaterialTheme.typography.headlineSmall,
             fontWeight = FontWeight.Bold,
             color = MaterialTheme.colorScheme.onSurface,
-            modifier = Modifier.padding(bottom = Dimens.PaddingSmall) // Add bottom padding for the title
+            modifier = Modifier.padding(bottom = Dimens.PaddingSmall)
         )
 
         if (filteredSavedResults.isEmpty()) {

@@ -39,7 +39,7 @@ class ProfileViewModel @Inject constructor(
                 _websiteText.value = sharedPreferenceRepository.getString(Constants.WEBSITE, "")
                 _uiState.value = UiState.Success("Settings loaded successfully.")
             } catch (e: Exception) {
-                Log.e("SettingsViewModel", "Error loading settings", e)
+                Log.e("ProfileViewModel", "Error loading settings", e)
                 _uiState.value = UiState.Error(e.message ?: "An unknown error occurred.")
             }
         }
@@ -53,7 +53,7 @@ class ProfileViewModel @Inject constructor(
                 sharedPreferenceRepository.saveString(Constants.WEBSITE, websiteText)
                 _uiState.value = UiState.Success("Settings saved successfully.")
             } catch (e: Exception) {
-                Log.e("SettingsViewModel", "Error saving settings", e)
+                Log.e("ProfileViewModel", "Error saving settings", e)
                 _uiState.value = UiState.Error(e.message ?: "An unknown error occurred.")
             }
         }

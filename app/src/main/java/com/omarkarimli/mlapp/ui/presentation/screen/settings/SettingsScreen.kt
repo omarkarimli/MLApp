@@ -84,7 +84,6 @@ fun SettingsScreen(mainViewModel: MainViewModel) {
             isDarkModeEnabled = isDarkModeEnabled,
             onNotificationsToggle = viewModel::onNotificationsToggle,
             onDarkModeToggle = mainViewModel::onThemeChange,
-            // Pass the new function to the content
             onClearPreferences = { viewModel.clearSharedPreferences(isDarkModeEnabled) }
         )
     }
@@ -156,7 +155,6 @@ private fun ScrollContent(
     isDarkModeEnabled: Boolean,
     onNotificationsToggle: (Boolean) -> Unit,
     onDarkModeToggle: (Boolean) -> Unit,
-    // Add the new function parameter here
     onClearPreferences: () -> Unit
 ) {
     var dialogState by remember { mutableStateOf<String?>(null) }
@@ -184,7 +182,6 @@ private fun ScrollContent(
             "Reset Settings",
             "Revert all settings to their default values.",
             Icons.AutoMirrored.Rounded.ArrowForward,
-            // Update the onClick lambda to set the dialogState
             onClick = { dialogState = "resetSettings" }
         ),
         StandardListItemModel(
@@ -193,16 +190,13 @@ private fun ScrollContent(
             "About App",
             "View app information and version.",
             Icons.AutoMirrored.Rounded.ArrowForward,
-            // Update the onClick lambda to set the dialogState
             onClick = { dialogState = "aboutApp" }
         )
     )
 
     Column(
-        modifier = Modifier.padding(innerPadding).fillMaxWidth()
+        modifier = Modifier.fillMaxWidth().padding(innerPadding)
     ) {
-        Spacer(modifier = Modifier.height(Dimens.SpacerLarge))
-
         LazyColumn(
             modifier = Modifier.fillMaxWidth(),
             verticalArrangement = Arrangement.spacedBy(Dimens.PaddingSmall),
@@ -241,7 +235,6 @@ private fun ScrollContent(
                 onDismiss = { dialogState = null }
             )
         }
-        // New AlertDialog for Reset Settings
         "resetSettings" -> {
             AlertDialog(
                 onDismissRequest = { dialogState = null },
@@ -250,7 +243,7 @@ private fun ScrollContent(
                 confirmButton = {
                     TextButton(
                         onClick = {
-                            onClearPreferences() // Call the function to clear preferences
+                            onClearPreferences()
                             dialogState = null
                         }
                     ) {
@@ -264,7 +257,6 @@ private fun ScrollContent(
                 }
             )
         }
-        // New AlertDialog for About App
         "aboutApp" -> {
             AlertDialog(
                 onDismissRequest = { dialogState = null },
@@ -272,8 +264,8 @@ private fun ScrollContent(
                 text = {
                     Text(
                         text = "Version: " + context.getVersionNumber() + "\n\n" +
-                                "This is a machine learning companion app with Google ML Kit.\n" +
-                                "For support, please contact: " + Constants.MY_EMAIL
+                                "This is a machine learning app with Google ML Kit. " +
+                                "For support, please contact:\n" + Constants.MY_EMAIL
                     )
                 },
                 confirmButton = {
