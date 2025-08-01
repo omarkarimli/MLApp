@@ -102,9 +102,9 @@ fun TextRecognitionScreen() {
 
             try {
                 context.contentResolver.takePersistableUriPermission(imageUri, takeFlag)
-                Log.d("BarcodeScreen", "Persisted URI permission for: $imageUri")
+                Log.d("TextRecognitionScreen", "Persisted URI permission for: $imageUri")
             } catch (e: SecurityException) {
-                Log.e("BarcodeScreen", "Failed to persist URI permission: ${e.message}", e)
+                Log.e("TextRecognitionScreen", "Failed to persist URI permission: ${e.message}", e)
                 context.showToast("Failed to get persistent access to the image.")
                 return@let
             }

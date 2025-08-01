@@ -78,9 +78,9 @@ fun ObjectDetectionScreen() {
 
             try {
                 context.contentResolver.takePersistableUriPermission(imageUri, takeFlag)
-                Log.d("BarcodeScreen", "Persisted URI permission for: $imageUri")
+                Log.d("ObjectDetectionScreen", "Persisted URI permission for: $imageUri")
             } catch (e: SecurityException) {
-                Log.e("BarcodeScreen", "Failed to persist URI permission: ${e.message}", e)
+                Log.e("ObjectDetectionScreen", "Failed to persist URI permission: ${e.message}", e)
                 context.showToast("Failed to get persistent access to the image.")
                 return@let
             }

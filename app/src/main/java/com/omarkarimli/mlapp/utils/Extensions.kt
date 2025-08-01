@@ -116,7 +116,7 @@ fun List<ImageLabelResult>.toResultCards(): List<ResultCardModel> {
     return this.map { imageLabelResult ->
         ResultCardModel(
             title = imageLabelResult.label.text,
-            subtitle = "Confidence: ${imageLabelResult.label.confidence}",
+            subtitle = "Confidence: ${"%.2f".format(imageLabelResult.label.confidence)}",
             imageUri = imageLabelResult.imageUri
         )
     }

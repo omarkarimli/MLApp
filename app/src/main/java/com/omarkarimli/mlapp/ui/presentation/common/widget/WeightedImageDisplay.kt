@@ -55,7 +55,7 @@ fun WeightedImageDisplay(modifier: Modifier = Modifier) {
                     if (animatableWeight.value != targetWeight) {
                         animatableWeight.animateTo(
                             targetValue = targetWeight,
-                            animationSpec = tween(durationMillis = Dimens.animDurationMedium, easing = LinearEasing)
+                            animationSpec = tween(durationMillis = Dimens.ANIM_DURATION, easing = LinearEasing)
                         )
                     }
                 }

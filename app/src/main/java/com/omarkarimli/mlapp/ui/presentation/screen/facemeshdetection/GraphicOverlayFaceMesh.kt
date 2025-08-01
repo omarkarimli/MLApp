@@ -60,12 +60,12 @@ class GraphicOverlayFaceMesh @JvmOverloads constructor(context: Context, attrs: 
 
         val scaleX = overlayWidth.toFloat() / imageWidth
         val scaleY = overlayHeight.toFloat() / imageHeight
-        scaleFactor = min(scaleX, scaleY) * Dimens.FixedFaceMeshScaleFactor
+        scaleFactor = min(scaleX, scaleY) * Dimens.DEFAULT_FACE_MESH_SCALE_FACTOR
 
-        val ratioScale = context.getDeviceScreenRatioDp() / Dimens.staticDeviceRatio
+        val ratioScale = context.getDeviceScreenRatioDp() / Dimens.STATIC_DEVICE_RATIO
 
-        translateX = (overlayWidth - imageWidth * scaleFactor) / 2 + (Dimens.FixedFaceMeshPaddingX * ratioScale)
-        translateY = (overlayHeight - imageHeight * scaleFactor) / 2 - (Dimens.FixedFaceMeshPaddingY * ratioScale)
+        translateX = (overlayWidth - imageWidth * scaleFactor) / 2 + (Dimens.FIXED_FACEMESH_PADDING_X * ratioScale)
+        translateY = (overlayHeight - imageHeight * scaleFactor) / 2 - (Dimens.FIXED_FACEMESH_PADDING_Y * ratioScale)
 
         postInvalidate() // Request a redraw with new scale/translation
     }

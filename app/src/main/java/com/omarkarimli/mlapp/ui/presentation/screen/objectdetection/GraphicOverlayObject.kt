@@ -45,7 +45,7 @@ fun GraphicOverlayObject(objectResults: List<ScannedObject>, imageSize: Size, mo
                 color = Color.White,
                 topLeft = Offset(left, top),
                 size = androidx.compose.ui.geometry.Size(right - left, bottom - top),
-                style = Stroke(width = Dimens.DrawLineStrokeWidth)
+                style = Stroke(width = Dimens.DRAW_LINE_STROKE_WIDTH)
             )
 
             val labelText = detectedObject.labels.firstOrNull()?.text ?: Constants.NOT_APPLICABLE
@@ -56,7 +56,7 @@ fun GraphicOverlayObject(objectResults: List<ScannedObject>, imageSize: Size, mo
 
             val textPaint = Paint().apply {
                 color = android.graphics.Color.BLACK
-                textSize = Dimens.DrawLabelTextSize
+                textSize = Dimens.DRAW_LABEL_TEXT_SIZE
                 textAlign = Paint.Align.LEFT
                 isAntiAlias = true
             }

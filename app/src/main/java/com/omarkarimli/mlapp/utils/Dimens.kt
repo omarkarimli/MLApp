@@ -5,13 +5,13 @@ import androidx.compose.ui.unit.sp
 
 object Dimens {
     // Static Device Ratio
-    const val staticDeviceRatio: Float = 1080f / 2400f
+    const val STATIC_DEVICE_RATIO: Float = 1080f / 2400f
 
     // Duration anim
-    const val animDurationMedium = 400
+    const val ANIM_DURATION = 400
 
     // Splash Duration
-    const val splashDuration = 5000L
+    const val SPLASH_DURATION = 5000L
 
 
     // Swipe to Reveal
@@ -49,7 +49,6 @@ object Dimens {
     val ListMaxHeight = 384.dp
 
     // Spacer Heights
-    val SpacerHeightSmall = 16.dp
     val SpacerHeightMedium = 24.dp
     val SpacerHeightLarge = 32.dp
     val SpacerHeightExtraLarge = 48.dp
@@ -68,15 +67,15 @@ object Dimens {
     val LineHeightHeadlineMedium = 42.sp
     val LetterSpacingButton = 1.sp
 
-    const val DrawLineStrokeWidth = 6f
-    const val DrawLabelTextSize = 40f
+    const val DRAW_LINE_STROKE_WIDTH = 6f
+    const val DRAW_LABEL_TEXT_SIZE = 40f
 
     // Indicator
     val IndicatorWidth = 4.dp
     val IndicatorHeight = 40.dp
 
-    const val FixedFaceMeshScaleFactor = 1.25f
+    const val DEFAULT_FACE_MESH_SCALE_FACTOR = 1.25f
 
-    const val FixedFaceMeshPaddingX = 172f
-    const val FixedFaceMeshPaddingY = 468f
+    const val FIXED_FACEMESH_PADDING_X = 172f
+    const val FIXED_FACEMESH_PADDING_Y = 468f
 }

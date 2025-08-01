@@ -24,7 +24,7 @@ class SplashViewModel @Inject constructor(
 
     init {
         viewModelScope.launch {
-            delay(Dimens.splashDuration)
+            delay(Dimens.SPLASH_DURATION)
 
             val loginKey = sharedPreferenceRepository.getBoolean(Constants.LOGIN_KEY, false)
             _uiState.value = if (loginKey) UiState.Success("Login successful") else UiState.Error("Login failed")
