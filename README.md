@@ -1,25 +1,76 @@
-# 📰 Welcome to MLApp!
+### Google ML Kit
+<img src="https://github.com/user-attachments/assets/f237d545-6c92-4711-a0f2-36437a3e1802" alt="mlkit" height="256">
+
+# 🤖 Welcome to MLApp!
 Let me introduce the project:
 
 This is a **Jetpack Compose** application for machine learning built with **Kotlin**.
 It follows MVVM Architecture and implements Clean Code principles.
 
 ### 🛠 Built With:
-- MVVM with Clean Architecture
-- Material Design 3
-- Coroutines
-- Hilt for Dependency Injection
-- Navigation Component
-- Android JetPack
-- StateFlow
-- LiveData
-- Lifecycle
-- ViewModel
-- Room Database
-- SharedPreferences
 
-### Google ML Kit
-<img src="https://github.com/user-attachments/assets/f237d545-6c92-4711-a0f2-36437a3e1802" alt="mlkit" height="256">
+### 🎨 UI & Design
+
+- **Jetpack Compose**
+- **Material Design 3**
+- **ConstraintLayout** (Interop support)
+
+---
+
+### 🧩 Dependency Injection
+
+- **Hilt**
+  - `hilt-android`
+  - `hilt-navigation-compose`
+
+---
+
+### 🔄 Asynchronous Programming
+
+- **Kotlin Coroutines**
+  - `kotlinx-coroutines-play-services`
+
+---
+
+### 📦 Jetpack Components
+
+- **Lifecycle Components**
+  - `lifecycle-viewmodel-compose`
+  - `lifecycle-runtime-ktx`
+- **Navigation**
+  - `navigation-compose`
+- **Paging**
+  - `paging-runtime`
+  - `paging-compose`
+- **Room (Database)**
+  - `room-runtime`, `room-ktx`, `room-paging`
+  - KSP annotation processor
+
+---
+
+### 📷 Camera & Machine Learning
+
+- **CameraX**
+  - `camera-core`, `camera2`, `camera-lifecycle`, `camera-video`, `camera-view`, `camera-extensions`
+- **Google ML Kit APIs**
+  - **Barcode Scanning**
+  - **Image Labeling**
+  - **Object Detection**
+  - **Face Detection**
+  - **Face Mesh Detection** (beta)
+  - **Text Recognition**:
+    - Latin
+    - Chinese
+    - Japanese
+    - Korean
+    - Devanagari
+
+---
+
+### 🖼️ Image Loading
+
+- **Coil**
+  - `coil-compose`
 
 ### 📷 Screens
 
@@ -31,4 +82,3 @@ It follows MVVM Architecture and implements Clean Code principles.
 <img src="https://github.com/user-attachments/assets/d07de44f-6be3-4a86-96ad-1d46fc84b820" alt="s6" height="256" style="margin: 24px;">
 <img src="https://github.com/user-attachments/assets/3a85ef65-0961-40b5-b5d3-fb2250499672" alt="s7" height="256" style="margin: 24px;">
 <img src="https://github.com/user-attachments/assets/e742b948-bce3-423a-bc0f-2efeb7f2041b" alt="s8" height="256" style="margin: 24px;">
-<img src="https://github.com/user-attachments/assets/69c0bf40-fdbf-4d4b-aeda-73ff4e27e5de" alt="s9" height="256" style="margin: 24px;">
