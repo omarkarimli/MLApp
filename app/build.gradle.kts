@@ -86,7 +86,6 @@ dependencies {
 
     // Coil
     implementation("io.coil-kt:coil-compose:2.7.0")
-    implementation("io.coil-kt:coil-gif:2.7.0") // For GIFs
 
     // Image Labeling
     implementation("com.google.mlkit:image-labeling:17.0.9")
@@ -113,9 +112,8 @@ dependencies {
     implementation("com.google.mlkit:text-recognition-korean:16.0.1")
 
     // Hilt
-    implementation("com.google.dagger:hilt-android:2.57") // Use the latest stable version
-    // kapt "com.google.dagger:hilt-android-compiler:2.51.1" // REMOVE THIS LINE
-    ksp("com.google.dagger:hilt-android-compiler:2.57") // ADD THIS LINE for KSP
+    implementation("com.google.dagger:hilt-android:2.57")
+    ksp("com.google.dagger:hilt-android-compiler:2.57")
 
     // Hilt Navigation Compose
     implementation("androidx.hilt:hilt-navigation-compose:1.2.0")
@@ -125,10 +123,6 @@ dependencies {
 
     // Coroutines
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-play-services:1.10.2")
-
-    // Video Player
-    implementation("androidx.media3:media3-exoplayer:1.7.1")
-    implementation("androidx.media3:media3-ui:1.7.1") // For PlayerView
 
     // Room
     implementation("androidx.room:room-runtime:2.7.2")

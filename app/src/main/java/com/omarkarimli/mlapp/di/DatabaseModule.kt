@@ -4,8 +4,6 @@ import android.content.Context
 import androidx.room.Room
 import com.omarkarimli.mlapp.data.local.AppDatabase
 import com.omarkarimli.mlapp.data.local.ResultCardDao
-import com.omarkarimli.mlapp.data.repository.RoomRepositoryImpl
-import com.omarkarimli.mlapp.domain.repository.RoomRepository
 import com.omarkarimli.mlapp.utils.Constants
 import dagger.Module
 import dagger.Provides
