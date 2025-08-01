@@ -5,6 +5,7 @@ object Constants {
 
     // My info
     const val MY_EMAIL = "omarkarimli.361@gmail.com"
+    const val MY_LINKEDIN = "https://www.linkedin.com/in/omarkarimli/"
     const val HELP_URL = "https://www.instagram.com/omar.karimli/"
 
     // Room

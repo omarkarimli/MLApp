@@ -22,7 +22,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowForward
 import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material.icons.rounded.DarkMode
-import androidx.compose.material.icons.rounded.Language
 import androidx.compose.material.icons.rounded.Notifications
 import androidx.compose.material.icons.rounded.Person
 import androidx.compose.material.icons.rounded.QuestionMark
@@ -59,7 +58,6 @@ import com.omarkarimli.mlapp.ui.presentation.common.widget.StandardListItemUi
 import com.omarkarimli.mlapp.ui.presentation.main.MainViewModel
 import com.omarkarimli.mlapp.utils.Constants
 import com.omarkarimli.mlapp.utils.Dimens
-import com.omarkarimli.mlapp.utils.copyToClipboard
 import com.omarkarimli.mlapp.utils.getVersionNumber
 import com.omarkarimli.mlapp.utils.openUrl
 
@@ -281,11 +279,21 @@ private fun ScrollContent(
                 confirmButton = {
                     TextButton(
                         onClick = {
-                            context.copyToClipboard(Constants.MY_EMAIL)
+                            context.openUrl(Constants.MY_LINKEDIN)
                             dialogState = null
                         }
                     ) {
-                        Text("Copy Email")
+                        Text("Open LinkedIn")
+                    }
+                },
+                dismissButton = {
+                    TextButton(
+                        onClick = {
+                            context.openUrl("mailto:${Constants.MY_EMAIL}")
+                            dialogState = null
+                        }
+                    ) {
+                        Text("Send Email")
                     }
                 }
             )

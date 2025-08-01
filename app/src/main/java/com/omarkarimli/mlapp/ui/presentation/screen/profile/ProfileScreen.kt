@@ -1,5 +1,6 @@
 package com.omarkarimli.mlapp.ui.presentation.screen.profile
 
+import android.content.Context
 import androidx.compose.foundation.layout.Column
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -15,7 +16,9 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.rounded.Done
+import androidx.compose.material.icons.rounded.Link
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilledIconButton
 import androidx.compose.material3.FilledTonalIconButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -28,6 +31,7 @@ import androidx.compose.material3.rememberTopAppBarState
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -35,11 +39,13 @@ import com.omarkarimli.mlapp.ui.navigation.LocalNavController
 import com.omarkarimli.mlapp.ui.navigation.Screen
 import com.omarkarimli.mlapp.ui.presentation.common.widget.MyTextField
 import com.omarkarimli.mlapp.utils.Dimens
+import com.omarkarimli.mlapp.utils.copyToClipboard
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ProfileScreen() {
     val viewModel: ProfileViewModel = hiltViewModel()
+    val context = LocalContext.current
     val scrollBehavior = TopAppBarDefaults.enterAlwaysScrollBehavior(rememberTopAppBarState())
 
     val bioText by viewModel.bioText.collectAsState()
@@ -48,7 +54,7 @@ fun ProfileScreen() {
     Scaffold(
         modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
         topBar = {
-            MyTopAppBar(scrollBehavior, onSave = { viewModel.saveSettings(bioText, websiteText) })
+            MyTopAppBar(scrollBehavior, context, onSave = { viewModel.saveSettings(bioText, websiteText) }, websiteText)
         }
     ) { innerPadding ->
         ScrollContent(innerPadding, bioText, websiteText)
@@ -57,7 +63,7 @@ fun ProfileScreen() {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun MyTopAppBar(scrollBehavior: TopAppBarScrollBehavior, onSave: () -> Unit) {
+private fun MyTopAppBar(scrollBehavior: TopAppBarScrollBehavior, context: Context, onSave: () -> Unit, websiteText: String) {
     val navController = LocalNavController.current
 
     TopAppBar(
@@ -83,6 +89,20 @@ private fun MyTopAppBar(scrollBehavior: TopAppBarScrollBehavior, onSave: () -> U
             }
         },
         actions = {
+            FilledIconButton(
+                onClick = {
+                    context.copyToClipboard(websiteText)
+                },
+                modifier = Modifier.size(Dimens.IconSizeLarge),
+                shape = IconButtonDefaults.filledShape,
+                colors = IconButtonDefaults.filledIconButtonColors(
+                    containerColor = MaterialTheme.colorScheme.surfaceContainer,
+                    contentColor = MaterialTheme.colorScheme.onSurface
+                )
+            ) {
+                Icon(Icons.Rounded.Link, modifier = Modifier.size(Dimens.IconSizeSmall), contentDescription = "Pick Photo")
+            }
+            Spacer(Modifier.size(Dimens.PaddingSmall))
             FilledTonalIconButton(
                 onClick = onSave,
                 modifier = Modifier

@@ -15,7 +15,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.Bookmark
+import androidx.compose.material.icons.outlined.BookmarkBorder
 import androidx.compose.material.icons.rounded.ClearAll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
@@ -273,7 +273,7 @@ private fun ScrollContent(
                                     )
                                 } else {
                                     Icon(
-                                        Icons.Outlined.Bookmark,
+                                        Icons.Outlined.BookmarkBorder,
                                         modifier = Modifier.size(Dimens.IconSizeExtraLarge),
                                         tint = MaterialTheme.colorScheme.onSurfaceVariant,
                                         contentDescription = "Empty"
