@@ -1,7 +1,7 @@
-# 📰 Welcome to NewsApp!
+# 📰 Welcome to MLApp!
 Let me introduce the project:
 
-NewsApp is an **Jetpack Compose** e-commerce application built with **Kotlin**.
+This is a **Jetpack Compose** application for machine learning built with **Kotlin**.
 It follows MVVM Architecture and implements Clean Code principles.
 
 ### 🛠 Built With:
@@ -15,32 +15,20 @@ It follows MVVM Architecture and implements Clean Code principles.
 - LiveData
 - Lifecycle
 - ViewModel
-- Retrofit
-- Okhttp
-- Okhttp3:Logging-interceptor
-- Gson
 - Room Database
-- Firebase Authentication
-- Firestore
-- Picasso
-- Lottie
-- DotsIndicator
 - SharedPreferences
 
-### Architecture
-Google ML Kit
+### Google ML Kit
 <img src="https://github.com/user-attachments/assets/f237d545-6c92-4711-a0f2-36437a3e1802" alt="mlkit" height="256">
 
 ### 📷 Screens
 
-<img src="https://github.com/user-attachments/assets/839baffb-7d6e-48dd-b0d2-be1f6d094be9" alt="onboarding" height="256" style="margin: 24px;">
-<img src="https://github.com/user-attachments/assets/cc8471dc-f528-4160-b696-dac2d16c845e" alt="home" height="256" style="margin: 24px;">
-<img src="https://github.com/user-attachments/assets/bdd89ef9-eb6d-4ebe-8066-4b33f5795f93" alt="explore" height="256" style="margin: 24px;">
-<img src="https://github.com/user-attachments/assets/4f22b0e0-a3e8-41ce-af0e-dedd58c7639d" alt="edit profile" height="256" style="margin: 24px;">
-<img src="https://github.com/user-attachments/assets/e70bb430-5c62-47c6-a3ab-1375abe14368" alt="bookmark" height="256" style="margin: 24px;">
-<img src="https://github.com/user-attachments/assets/a01dcf02-c4c3-4807-adf5-ccd261434027" alt="article" height="256" style="margin: 24px;">
-<img src="https://github.com/user-attachments/assets/c47ca636-d991-44fa-a481-9e7ad3ffb088" alt="signup" height="256" style="margin: 24px;">
-<img src="https://github.com/user-attachments/assets/6506f135-18eb-4ed4-a39a-df8b6ff0efd0" alt="settings" height="256" style="margin: 24px;">
-<img src="https://github.com/user-attachments/assets/a78b802b-e71e-4a36-a8b4-bd0c17f32167" alt="search" height="256" style="margin: 24px;">
-<img src="https://github.com/user-attachments/assets/fa376e00-1351-4ce7-9790-39a0aafea430" alt="login" height="256" style="margin: 24px;">
-
+<img src="https://github.com/user-attachments/assets/d8394a92-af2f-412a-9a30-005f01feb860" alt="s1" height="256" style="margin: 24px;">
+<img src="https://github.com/user-attachments/assets/d6c9f945-f854-495b-a71a-145ea6afc865" alt="s2" height="256" style="margin: 24px;">
+<img src="https://github.com/user-attachments/assets/4404e46c-cd61-49d1-812d-0ce81f5183e9" alt="s3" height="256" style="margin: 24px;">
+<img src="https://github.com/user-attachments/assets/65631850-ab02-4b65-b953-69912c27fb5e" alt="s4" height="256" style="margin: 24px;">
+<img src="https://github.com/user-attachments/assets/2a397c00-5ede-44a0-8e7d-0e07fcce71f1" alt="s5" height="256" style="margin: 24px;">
+<img src="https://github.com/user-attachments/assets/d07de44f-6be3-4a86-96ad-1d46fc84b820" alt="s6" height="256" style="margin: 24px;">
+<img src="https://github.com/user-attachments/assets/3a85ef65-0961-40b5-b5d3-fb2250499672" alt="s7" height="256" style="margin: 24px;">
+<img src="https://github.com/user-attachments/assets/e742b948-bce3-423a-bc0f-2efeb7f2041b" alt="s8" height="256" style="margin: 24px;">
+<img src="https://github.com/user-attachments/assets/69c0bf40-fdbf-4d4b-aeda-73ff4e27e5de" alt="s9" height="256" style="margin: 24px;">
