@@ -14,6 +14,8 @@ It follows MVVM Architecture and implements Clean Code principles.
 - **Jetpack Compose**
 - **Material Design 3**
 - **ConstraintLayout** (Interop support)
+- **Slide to Reveal**
+- **Dynamic Layouts**
 
 ---
 
