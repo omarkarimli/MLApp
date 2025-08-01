@@ -1,6 +1,5 @@
 package com.omarkarimli.mlapp.ui.presentation.screen.login
 
-import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.omarkarimli.mlapp.domain.repository.SharedPreferenceRepository
@@ -21,7 +20,7 @@ class LoginViewModel @Inject constructor(
     private val _uiState = MutableStateFlow<UiState>(UiState.Idle)
     val uiState: StateFlow<UiState> = _uiState.asStateFlow()
 
-    fun onContinue(bioText: String, websiteText: String, isSystemInDarkTheme: Boolean) {
+    fun onContinue(bioText: String, websiteText: String) {
         viewModelScope.launch {
             _uiState.value = UiState.Loading
 
@@ -29,10 +28,6 @@ class LoginViewModel @Inject constructor(
             sharedPreferenceRepository.saveString(Constants.WEBSITE, websiteText)
             sharedPreferenceRepository.saveBoolean(Constants.LOGIN_KEY, true)
             sharedPreferenceRepository.saveBoolean(Constants.NOTIFICATION_KEY, false)
-            sharedPreferenceRepository.saveBoolean(Constants.DARK_MODE, isSystemInDarkTheme)
-
-            Log.e("LoginViewModel", "LOGIN KEY: " + sharedPreferenceRepository.getBoolean(
-                Constants.LOGIN_KEY, false).toString())
 
             _uiState.value = UiState.Success("Logged in successfully")
         }

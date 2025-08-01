@@ -182,14 +182,6 @@ private fun ScrollContent(
         ),
         StandardListItemModel(
             "3",
-            Icons.Rounded.Language,
-            "Language",
-            "Select your preferred language.",
-            Icons.AutoMirrored.Rounded.ArrowForward,
-            onClick = { /* Handle click for "Language" */ }
-        ),
-        StandardListItemModel(
-            "4",
             Icons.Rounded.SettingsBackupRestore,
             "Reset Settings",
             "Revert all settings to their default values.",
@@ -198,7 +190,7 @@ private fun ScrollContent(
             onClick = { dialogState = "resetSettings" }
         ),
         StandardListItemModel(
-            "5",
+            "4",
             Icons.Outlined.Info,
             "About App",
             "View app information and version.",

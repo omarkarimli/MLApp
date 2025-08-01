@@ -35,6 +35,9 @@ object Dimens {
     val IconSizeLarge = 32.dp
     val IconSizeExtraLarge = 48.dp
 
+    // Icon Background
+    val IconBackgroundSize = 40.dp
+
     // Corner Radius
     val CornerRadiusMedium = 8.dp
     val CornerRadiusLarge = 16.dp

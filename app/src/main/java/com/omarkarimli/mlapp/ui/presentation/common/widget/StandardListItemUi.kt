@@ -21,7 +21,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.unit.dp
 import com.omarkarimli.mlapp.domain.models.StandardListItemModel
 import com.omarkarimli.mlapp.utils.Dimens
 
@@ -44,18 +43,18 @@ fun StandardListItemUi(
         ) {
             Box(
                 modifier = Modifier
-                    .size(40.dp) // Set the size for the background area
-                    .background(MaterialTheme.colorScheme.secondaryContainer, shape = RoundedCornerShape(14.dp)),
+                    .size(Dimens.IconBackgroundSize)
+                    .background(MaterialTheme.colorScheme.secondaryContainer, shape = RoundedCornerShape(Dimens.CornerRadiusLarge)),
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
                     imageVector = item.icon,
                     contentDescription = item.title,
                     tint = MaterialTheme.colorScheme.onSecondaryContainer,
-                    modifier = Modifier.size(24.dp) // Size of the icon itself
+                    modifier = Modifier.size(Dimens.IconSizeMedium)
                 )
             }
-            Spacer(modifier = Modifier.width(16.dp))
+            Spacer(modifier = Modifier.width(Dimens.SpacerMedium))
             Column(modifier = Modifier.weight(1f)) {
                 Text(
                     text = item.title,
@@ -71,11 +70,11 @@ fun StandardListItemUi(
                     overflow = TextOverflow.Ellipsis
                 )
             }
-            Spacer(modifier = Modifier.width(16.dp))
+            Spacer(modifier = Modifier.width(Dimens.SpacerMedium))
             Icon(
                 imageVector = item.endingIcon,
                 contentDescription = null, // Or provide a meaningful description
-                modifier = Modifier.size(24.dp)
+                modifier = Modifier.size(Dimens.IconSizeMedium)
             )
         }
     }

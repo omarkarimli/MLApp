@@ -1,7 +1,6 @@
 package com.omarkarimli.mlapp.ui.presentation.screen.login
 
 import android.util.Log
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -71,8 +70,6 @@ fun LoginScreen() {
         }
     }
 
-    val isSystemInDarkTheme = isSystemInDarkTheme()
-
     Scaffold { innerPadding ->
         Column(
             modifier = Modifier
@@ -94,7 +91,7 @@ fun LoginScreen() {
             }
             Spacer(modifier = Modifier.height(Dimens.SpacerLarge))
             Button(
-                onClick = { viewModel.onContinue(bioText, websiteText, isSystemInDarkTheme) },
+                onClick = { viewModel.onContinue(bioText, websiteText) },
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(Dimens.ButtonHeight),

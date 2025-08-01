@@ -21,16 +21,20 @@ class MainViewModel @Inject constructor(
     private val _isDarkModeEnabled = MutableStateFlow(false)
     val isDarkModeEnabled: StateFlow<Boolean> = _isDarkModeEnabled.asStateFlow()
 
-    init {
-        loadInitialTheme()
-    }
+    private val _logKey = MutableStateFlow(false)
 
-    private fun loadInitialTheme() {
+    fun loadInitialTheme(isSystemInDarkTheme: Boolean) {
         viewModelScope.launch {
-            _isDarkModeEnabled.value = sharedPreferenceRepository.getBoolean(
-                Constants.DARK_MODE,
+            _logKey.value = sharedPreferenceRepository.getBoolean(
+                Constants.LOGIN_KEY,
                 false
             )
+
+            _isDarkModeEnabled.value = if (_logKey.value) sharedPreferenceRepository.getBoolean(
+                Constants.DARK_MODE,
+                false
+            ) else isSystemInDarkTheme
+
             // Apply the theme on startup
             themeRepository.applyTheme(_isDarkModeEnabled.value)
         }
