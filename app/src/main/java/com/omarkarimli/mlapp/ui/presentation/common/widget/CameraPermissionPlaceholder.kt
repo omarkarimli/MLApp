@@ -14,7 +14,6 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextAlign
 import com.omarkarimli.mlapp.utils.Dimens
 
@@ -25,7 +24,10 @@ fun CameraPermissionPlaceholder(
 ) {
     Box(
         modifier = modifier
-            .background(Color.Gray.copy(alpha = 0.3f), RoundedCornerShape(Dimens.CornerRadiusMedium)),
+            .background(
+                MaterialTheme.colorScheme.onSurface.copy(alpha = 0.1f),
+                RoundedCornerShape(Dimens.CornerRadiusMedium)
+            ),
         contentAlignment = Alignment.Center
     ) {
         Column(
@@ -34,7 +36,7 @@ fun CameraPermissionPlaceholder(
         ) {
             Text(
                 text = "Camera permission not granted",
-                color = Color.White,
+                color = MaterialTheme.colorScheme.onSurface,
                 textAlign = TextAlign.Center,
                 style = MaterialTheme.typography.bodyLarge
             )
