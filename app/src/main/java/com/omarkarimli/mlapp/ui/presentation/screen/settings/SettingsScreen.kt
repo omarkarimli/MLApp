@@ -22,6 +22,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowForward
 import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material.icons.rounded.DarkMode
+import androidx.compose.material.icons.rounded.InvertColors
 import androidx.compose.material.icons.rounded.Notifications
 import androidx.compose.material.icons.rounded.Person
 import androidx.compose.material.icons.rounded.QuestionMark
@@ -56,6 +57,7 @@ import com.omarkarimli.mlapp.ui.navigation.LocalNavController
 import com.omarkarimli.mlapp.ui.navigation.Screen
 import com.omarkarimli.mlapp.ui.presentation.common.widget.StandardListItemUi
 import com.omarkarimli.mlapp.ui.presentation.main.MainViewModel
+import com.omarkarimli.mlapp.ui.theme.AppTheme
 import com.omarkarimli.mlapp.utils.Constants
 import com.omarkarimli.mlapp.utils.Dimens
 import com.omarkarimli.mlapp.utils.getVersionNumber
@@ -69,7 +71,8 @@ fun SettingsScreen(mainViewModel: MainViewModel) {
     val scrollBehavior = TopAppBarDefaults.enterAlwaysScrollBehavior(rememberTopAppBarState())
 
     val isNotificationsEnabled by viewModel.isNotificationsEnabled.collectAsStateWithLifecycle()
-    val isDarkModeEnabled by mainViewModel.isDarkModeEnabled.collectAsStateWithLifecycle()
+    val currentTheme by mainViewModel.currentTheme.collectAsStateWithLifecycle()
+    val isDynamicColorEnabled by mainViewModel.isDynamicColorEnabled.collectAsStateWithLifecycle()
 
     Scaffold(
         modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
@@ -81,10 +84,12 @@ fun SettingsScreen(mainViewModel: MainViewModel) {
             context = context,
             innerPadding = innerPadding,
             isNotificationsEnabled = isNotificationsEnabled,
-            isDarkModeEnabled = isDarkModeEnabled,
-            onNotificationsToggle = viewModel::onNotificationsToggle,
-            onDarkModeToggle = mainViewModel::onThemeChange,
-            onClearPreferences = { viewModel.clearSharedPreferences(isDarkModeEnabled) }
+            isDynamicColorEnabled = isDynamicColorEnabled,
+            currentTheme = currentTheme,
+            onNotificationsToggle = { viewModel.onNotificationsToggle(it) },
+            onDynamicColorToggle = { mainViewModel.onDynamicColorToggle(it) },
+            onThemeChange = { mainViewModel.onThemeChange(it) },
+            onClearPreferences = { viewModel.clearSharedPreferences(currentTheme) }
         )
     }
 }
@@ -152,50 +157,62 @@ private fun ScrollContent(
     context: Context,
     innerPadding: PaddingValues,
     isNotificationsEnabled: Boolean,
-    isDarkModeEnabled: Boolean,
+    isDynamicColorEnabled: Boolean,
+    currentTheme: AppTheme,
     onNotificationsToggle: (Boolean) -> Unit,
-    onDarkModeToggle: (Boolean) -> Unit,
-    onClearPreferences: () -> Unit
+    onDynamicColorToggle: (Boolean) -> Unit,
+    onThemeChange: (AppTheme) -> Unit,
+    onClearPreferences: (AppTheme) -> Unit
 ) {
     var dialogState by remember { mutableStateOf<String?>(null) }
 
     val items = listOf(
         StandardListItemModel(
-            "1",
-            Icons.Rounded.Notifications,
-            "Notifications",
-            "Manage your alerts and sounds.",
-            Icons.AutoMirrored.Rounded.ArrowForward,
+            id = 0,
+            leadingIcon = Icons.Rounded.Notifications,
+            title = "Notifications",
+            description = "Manage your alerts and sounds.",
+            endingIcon = Icons.AutoMirrored.Rounded.ArrowForward,
             onClick = { dialogState = "notifications" }
         ),
         StandardListItemModel(
-            "2",
-            Icons.Rounded.DarkMode,
-            "Dark mode",
-            "Change the app's appearance.",
-            Icons.AutoMirrored.Rounded.ArrowForward,
+            id = 1,
+            leadingIcon = Icons.Rounded.DarkMode,
+            title = "Dark mode",
+            description = "Change the app's appearance.",
+            endingIcon = Icons.AutoMirrored.Rounded.ArrowForward,
             onClick = { dialogState = "darkmode" }
         ),
         StandardListItemModel(
-            "3",
-            Icons.Rounded.SettingsBackupRestore,
-            "Reset Settings",
-            "Revert all settings to their default values.",
-            Icons.AutoMirrored.Rounded.ArrowForward,
+            id = 1,
+            leadingIcon = Icons.Rounded.InvertColors,
+            title = "Dynamic color",
+            description = "Make the app's colors dynamic.",
+            endingIcon = Icons.AutoMirrored.Rounded.ArrowForward,
+            onClick = { dialogState = "dynamic_color" }
+        ),
+        StandardListItemModel(
+            id = 2,
+            leadingIcon = Icons.Rounded.SettingsBackupRestore,
+            title = "Reset Settings",
+            description = "Revert all settings to their default values.",
+            endingIcon = Icons.AutoMirrored.Rounded.ArrowForward,
             onClick = { dialogState = "resetSettings" }
         ),
         StandardListItemModel(
-            "4",
-            Icons.Outlined.Info,
-            "About App",
-            "View app information and version.",
-            Icons.AutoMirrored.Rounded.ArrowForward,
+            id = 3,
+            leadingIcon = Icons.Outlined.Info,
+            title = "About App",
+            description = "View app information and version.",
+            endingIcon = Icons.AutoMirrored.Rounded.ArrowForward,
             onClick = { dialogState = "aboutApp" }
         )
     )
 
     Column(
-        modifier = Modifier.fillMaxWidth().padding(innerPadding)
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(innerPadding)
     ) {
         LazyColumn(
             modifier = Modifier.fillMaxWidth(),
@@ -222,14 +239,33 @@ private fun ScrollContent(
                 onDismiss = { dialogState = null }
             )
         }
+        "dynamic_color" -> {
+            SettingsSelectionDialog(
+                title = "Dynamic color",
+                options = listOf("On", "Off"),
+                selectedOption = if (isDynamicColorEnabled) "On" else "Off",
+                onOptionSelected = {
+                    val isEnabled = it == "On"
+                    onDynamicColorToggle(isEnabled)
+                    dialogState = null
+                },
+                onDismiss = { dialogState = null }
+            )
+        }
         "darkmode" -> {
+            // FIX: This dialog now handles all three theme options
             SettingsSelectionDialog(
                 title = "Dark mode",
-                options = listOf("Light", "Dark"),
-                selectedOption = if (isDarkModeEnabled) "Dark" else "Light",
+                options = listOf("System", "Light", "Dark"),
+                selectedOption = currentTheme.name.lowercase().replaceFirstChar { it.uppercase() },
                 onOptionSelected = {
-                    val isEnabled = it == "Dark"
-                    onDarkModeToggle(isEnabled)
+                    val newTheme = when (it) {
+                        "System" -> AppTheme.System
+                        "Light" -> AppTheme.Light
+                        "Dark" -> AppTheme.Dark
+                        else -> AppTheme.System // Default to system
+                    }
+                    onThemeChange(newTheme)
                     dialogState = null
                 },
                 onDismiss = { dialogState = null }
@@ -243,7 +279,8 @@ private fun ScrollContent(
                 confirmButton = {
                     TextButton(
                         onClick = {
-                            onClearPreferences()
+                            // FIX: Pass the current theme to the clear preferences function
+                            onClearPreferences(currentTheme)
                             dialogState = null
                         }
                     ) {
@@ -264,7 +301,7 @@ private fun ScrollContent(
                 text = {
                     Text(
                         text = "Version: " + context.getVersionNumber() + "\n\n" +
-                                "This is a machine learning app with Google ML Kit. " +
+                                "This is a MLApp powered by Google ML Kit. " +
                                 "For support, please contact:\n" + Constants.MY_EMAIL
                     )
                 },

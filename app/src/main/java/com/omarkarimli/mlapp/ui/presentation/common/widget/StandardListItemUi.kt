@@ -48,7 +48,7 @@ fun StandardListItemUi(
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
-                    imageVector = item.icon,
+                    imageVector = item.leadingIcon,
                     contentDescription = item.title,
                     tint = MaterialTheme.colorScheme.onSecondaryContainer,
                     modifier = Modifier.size(Dimens.IconSizeMedium)
@@ -62,20 +62,24 @@ fun StandardListItemUi(
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
-                Text(
-                    text = item.description,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
+                item.description?.let {
+                    Text(
+                        text = it,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
             }
             Spacer(modifier = Modifier.width(Dimens.SpacerMedium))
-            Icon(
-                imageVector = item.endingIcon,
-                contentDescription = null,
-                modifier = Modifier.size(Dimens.IconSizeMedium)
-            )
+            item.endingIcon?.let {
+                Icon(
+                    imageVector = it,
+                    contentDescription = null,
+                    modifier = Modifier.size(Dimens.IconSizeMedium)
+                )
+            }
         }
     }
 }

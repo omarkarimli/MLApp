@@ -17,7 +17,8 @@ object Constants {
     const val WEBSITE = "website"
     const val LOGIN_KEY = "login_key"
     const val NOTIFICATION_KEY = "notification_key"
-    const val DARK_MODE = "dark_mode"
+    const val THEME_KEY = "theme_key"
+    const val DYNAMIC_COLOR_KEY = "dynamic_color_key"
 
     // Font
     const val POPPINS = "Poppins"

@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.omarkarimli.mlapp.domain.repository.SharedPreferenceRepository
 import com.omarkarimli.mlapp.domain.repository.ThemeRepository
+import com.omarkarimli.mlapp.ui.theme.AppTheme
 import com.omarkarimli.mlapp.utils.Constants
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -15,37 +16,48 @@ import javax.inject.Inject
 @HiltViewModel
 class MainViewModel @Inject constructor(
     private val sharedPreferenceRepository: SharedPreferenceRepository,
-    val themeRepository: ThemeRepository
+    private val themeRepository: ThemeRepository
 ) : ViewModel() {
 
-    private val _isDarkModeEnabled = MutableStateFlow(false)
-    val isDarkModeEnabled: StateFlow<Boolean> = _isDarkModeEnabled.asStateFlow()
+    private val _currentTheme = MutableStateFlow(AppTheme.System)
+    val currentTheme: StateFlow<AppTheme> = _currentTheme.asStateFlow()
 
-    private val _logKey = MutableStateFlow(false)
+    private val _isDynamicColorEnabled = MutableStateFlow(false)
+    val isDynamicColorEnabled: StateFlow<Boolean> = _isDynamicColorEnabled.asStateFlow()
 
-    fun loadInitialTheme(isSystemInDarkTheme: Boolean) {
+    init {
+        loadInitialTheme()
+    }
+
+    fun loadInitialTheme() {
         viewModelScope.launch {
-            _logKey.value = sharedPreferenceRepository.getBoolean(
-                Constants.LOGIN_KEY,
-                false
-            )
+            // Load theme setting
+            val savedThemeName = sharedPreferenceRepository.getString(Constants.THEME_KEY, "system")
+            val initialTheme = when (savedThemeName) {
+                "light" -> AppTheme.Light
+                "dark" -> AppTheme.Dark
+                else -> AppTheme.System
+            }
+            _currentTheme.value = initialTheme
 
-            _isDarkModeEnabled.value = if (_logKey.value) sharedPreferenceRepository.getBoolean(
-                Constants.DARK_MODE,
-                false
-            ) else isSystemInDarkTheme
-
-            // Apply the theme on startup
-            themeRepository.applyTheme(_isDarkModeEnabled.value)
+            // Load dynamic color setting
+            val isDynamicColorEnabled = sharedPreferenceRepository.getBoolean(Constants.DYNAMIC_COLOR_KEY, false)
+            _isDynamicColorEnabled.value = isDynamicColorEnabled
         }
     }
 
-    fun onThemeChange(isDarkMode: Boolean) {
+    fun onThemeChange(newTheme: AppTheme) {
         viewModelScope.launch {
-            _isDarkModeEnabled.value = isDarkMode
-            sharedPreferenceRepository.saveBoolean(Constants.DARK_MODE, isDarkMode)
+            _currentTheme.value = newTheme
+            sharedPreferenceRepository.saveString(Constants.THEME_KEY, newTheme.name.lowercase())
+            themeRepository.applyTheme(newTheme)
+        }
+    }
 
-            themeRepository.applyTheme(isDarkMode)
+    fun onDynamicColorToggle(isEnabled: Boolean) {
+        viewModelScope.launch {
+            _isDynamicColorEnabled.value = isEnabled
+            sharedPreferenceRepository.saveBoolean(Constants.DYNAMIC_COLOR_KEY, isEnabled)
         }
     }
 }

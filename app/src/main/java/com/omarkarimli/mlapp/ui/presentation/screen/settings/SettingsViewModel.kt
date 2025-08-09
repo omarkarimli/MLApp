@@ -5,6 +5,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.omarkarimli.mlapp.domain.repository.SharedPreferenceRepository
 import com.omarkarimli.mlapp.ui.presentation.common.state.UiState
+import com.omarkarimli.mlapp.ui.theme.AppTheme
 import com.omarkarimli.mlapp.utils.Constants
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -32,9 +33,10 @@ class SettingsViewModel @Inject constructor(
         viewModelScope.launch {
             _uiState.value = UiState.Loading
             try {
+                // Load notifications setting with a default value of 'true'
                 _isNotificationsEnabled.value = sharedPreferenceRepository.getBoolean(
                     Constants.NOTIFICATION_KEY,
-                    true // Default value is often 'on' for notifications
+                    true
                 )
                 _uiState.value = UiState.Success("Settings loaded successfully.")
             } catch (e: Exception) {
@@ -48,16 +50,22 @@ class SettingsViewModel @Inject constructor(
         viewModelScope.launch {
             _isNotificationsEnabled.value = isEnabled
             sharedPreferenceRepository.saveBoolean(Constants.NOTIFICATION_KEY, isEnabled)
-            // Optional: Provide UI feedback
             _uiState.value = UiState.Success("Notifications setting updated.")
         }
     }
 
-    fun clearSharedPreferences(isDarkModeEnabled: Boolean) {
+    fun clearSharedPreferences(currentTheme: AppTheme) {
         viewModelScope.launch {
             sharedPreferenceRepository.clearSharedPreferences()
+
+            // After clearing, re-save the essential preferences
+            // This prevents the app from losing its state after a reset
             sharedPreferenceRepository.saveBoolean(Constants.LOGIN_KEY, true)
-            sharedPreferenceRepository.saveBoolean(Constants.DARK_MODE, isDarkModeEnabled)
+            sharedPreferenceRepository.saveString(Constants.THEME_KEY, currentTheme.name.lowercase())
+            sharedPreferenceRepository.saveBoolean(Constants.NOTIFICATION_KEY, true) // Reset notifications to default
+
+            // Re-load settings to reflect the default values in the UI
+            loadSettings()
         }
     }
 

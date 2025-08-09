@@ -77,43 +77,43 @@ fun HomeScreen() {
 
     val items = listOf(
         StandardListItemModel(
-            "1",
-            Icons.Rounded.TextFields,
-            "Text Recognition",
-            "Recognize and extract text from images.",
-            Icons.AutoMirrored.Rounded.ArrowForward,
+            0,
+            leadingIcon = Icons.Rounded.TextFields,
+            title = "Text Recognition",
+            description = "Recognize and extract text from images.",
+            endingIcon = Icons.AutoMirrored.Rounded.ArrowForward,
             onClick = { navController.navigate(Screen.TextRecognition.route) }
         ),
         StandardListItemModel(
-            "2",
-            Icons.Rounded.Face,
-            "Face Mesh Detection",
-            "Detect face mesh info on close-range images.",
-            Icons.AutoMirrored.Rounded.ArrowForward,
+            1,
+            leadingIcon = Icons.Rounded.Face,
+            title = "Face Mesh Detection",
+            description = "Detect face mesh info on close-range images.",
+            endingIcon = Icons.AutoMirrored.Rounded.ArrowForward,
             onClick = { navController.navigate(Screen.FaceMeshDetection.route) }
         ),
         StandardListItemModel(
-            "3",
-            Icons.Rounded.ImageSearch,
-            "Image Labeling",
-            "Identify objects, locations, activities, animal species, products, and more.",
-            Icons.AutoMirrored.Rounded.ArrowForward,
+            2,
+            leadingIcon = Icons.Rounded.ImageSearch,
+            title = "Image Labeling",
+            description = "Identify objects, locations, activities, animal species, products, and more.",
+            endingIcon = Icons.AutoMirrored.Rounded.ArrowForward,
             onClick = { navController.navigate(Screen.ImageLabeling.route) }
         ),
         StandardListItemModel(
-            "4",
-            Icons.Rounded.QrCodeScanner,
-            "Barcode Scanning",
-            "Scan and process barcodes. Supports most standard 1D and 2D formats.",
-            Icons.AutoMirrored.Rounded.ArrowForward,
+            3,
+            leadingIcon = Icons.Rounded.QrCodeScanner,
+            title = "Barcode Scanning",
+            description = "Scan and process barcodes. Supports most standard 1D and 2D formats.",
+            endingIcon = Icons.AutoMirrored.Rounded.ArrowForward,
             onClick = { navController.navigate(Screen.BarcodeScanning.route) }
         ),
         StandardListItemModel(
-            "5",
-            Icons.Rounded.CenterFocusStrong,
-            "Object Detection",
-            "Localize and track in real time one or more objects in the live camera feed.",
-            Icons.AutoMirrored.Rounded.ArrowForward,
+            4,
+            leadingIcon = Icons.Rounded.CenterFocusStrong,
+            title = "Object Detection",
+            description = "Localize and track in real time one or more objects in the live camera feed.",
+            endingIcon = Icons.AutoMirrored.Rounded.ArrowForward,
             onClick = { navController.navigate(Screen.ObjectDetection.route) }
         )
     )
@@ -192,7 +192,7 @@ private fun MyTopAppBar(scrollBehavior: TopAppBarScrollBehavior, items: List<Sta
                 items.forEach { item ->
                     DropdownMenuItem(
                         text = { Text(item.title) },
-                        leadingIcon = { Icon(item.icon, contentDescription = null) },
+                        leadingIcon = { Icon(item.leadingIcon, contentDescription = null) },
                         onClick = {
                             item.onClick()
                             expanded = false
@@ -217,7 +217,7 @@ private fun ScrollContent(
             items
         } else {
             items.filter {
-                it.title.contains(searchText, ignoreCase = true) || it.description.contains(searchText, ignoreCase = true)
+                it.title.contains(searchText, ignoreCase = true) || it.description?.contains(searchText, ignoreCase = true) == true
             }
         }
     }

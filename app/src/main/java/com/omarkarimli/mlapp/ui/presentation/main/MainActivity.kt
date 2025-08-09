@@ -8,8 +8,8 @@ import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.hilt.navigation.compose.hiltViewModel
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.omarkarimli.mlapp.ui.navigation.AppNavigation
+import com.omarkarimli.mlapp.ui.theme.AppTheme
 import com.omarkarimli.mlapp.ui.theme.MLAppTheme
 import dagger.hilt.android.AndroidEntryPoint
 
@@ -21,12 +21,16 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         setContent {
             val mainViewModel: MainViewModel = hiltViewModel()
-            val isDarkMode by mainViewModel.isDarkModeEnabled.collectAsState()
-
-            mainViewModel.loadInitialTheme(isSystemInDarkTheme())
+            val currentTheme by mainViewModel.currentTheme.collectAsState()
+            val isDynamicColorEnabled by mainViewModel.isDynamicColorEnabled.collectAsState()
 
             MLAppTheme(
-                darkTheme = isDarkMode
+                dynamicColor = isDynamicColorEnabled,
+                darkTheme = when (currentTheme) {
+                    AppTheme.Dark -> true
+                    AppTheme.Light -> false
+                    AppTheme.System -> isSystemInDarkTheme()
+                }
             ) {
                 AppNavigation(mainViewModel)
             }
