@@ -145,26 +145,26 @@ private fun MyTopAppBar(scrollBehavior: TopAppBarScrollBehavior, items: List<Sta
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(Dimens.PaddingSmall)
             ) {
+                Image(
+                    painter = painterResource(R.drawable.app_icon),
+                    contentDescription = "App Icon",
+                    modifier = Modifier.size(Dimens.IconSizeLarge)
+                )
+
                 AnimatedVisibility(
                     visible = !isTopAppBarMinimized,
                     enter = expandHorizontally(),
                     exit = shrinkHorizontally()
                 ) {
-                    Spacer(Modifier.size(Dimens.PaddingSmall))
-                    Image(
-                        painter = painterResource(R.drawable.app_icon),
-                        contentDescription = "App Icon",
-                        modifier = Modifier.size(Dimens.IconSizeExtraLarge)
+                    Text(
+                        stringResource(R.string.app_name),
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        style = if (isTopAppBarMinimized) MaterialTheme.typography.headlineSmall else MaterialTheme.typography.headlineMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.primary
                     )
                 }
-                Text(
-                    stringResource(R.string.app_name),
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                    style = if (isTopAppBarMinimized) MaterialTheme.typography.headlineSmall else MaterialTheme.typography.headlineMedium,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.primary
-                )
             }
         },
         actions = {
