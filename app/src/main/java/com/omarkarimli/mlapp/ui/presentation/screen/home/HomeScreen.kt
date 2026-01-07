@@ -120,9 +120,7 @@ fun HomeScreen() {
 
     Scaffold(
         modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
-        topBar = {
-            MyTopAppBar(scrollBehavior, items)
-        }
+        topBar = { MyTopAppBar(scrollBehavior, items) }
     ) { innerPadding ->
         ScrollContent(innerPadding, items, savedResults)
     }
@@ -133,6 +131,7 @@ fun HomeScreen() {
 private fun MyTopAppBar(scrollBehavior: TopAppBarScrollBehavior, items: List<StandardListItemModel>) {
     var expanded by remember { mutableStateOf(false) }
     val isTopAppBarMinimized = scrollBehavior.state.collapsedFraction > 0.5
+
     MediumTopAppBar(
         scrollBehavior = scrollBehavior,
         colors = TopAppBarDefaults.topAppBarColors(
@@ -141,10 +140,7 @@ private fun MyTopAppBar(scrollBehavior: TopAppBarScrollBehavior, items: List<Sta
             titleContentColor = MaterialTheme.colorScheme.onSurface,
         ),
         title = {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(Dimens.PaddingSmall)
-            ) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
                 Image(
                     painter = painterResource(R.drawable.app_icon),
                     contentDescription = "App Icon",
@@ -157,10 +153,11 @@ private fun MyTopAppBar(scrollBehavior: TopAppBarScrollBehavior, items: List<Sta
                     exit = shrinkHorizontally()
                 ) {
                     Text(
-                        stringResource(R.string.app_name),
+                        modifier = Modifier.padding(start = Dimens.PaddingSmall),
+                        text = stringResource(R.string.app_name),
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
-                        style = if (isTopAppBarMinimized) MaterialTheme.typography.headlineSmall else MaterialTheme.typography.headlineMedium,
+                        style = MaterialTheme.typography.headlineMedium,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.primary
                     )
@@ -265,9 +262,7 @@ private fun ScrollContent(
 
 @Composable
 private fun RecentlySaved(filteredSavedResults: List<ResultCardModel>) {
-    Column(
-        modifier = Modifier.fillMaxWidth()
-    ) {
+    Column(modifier = Modifier.fillMaxWidth()) {
         Text(
             text = "Recently Saved",
             style = MaterialTheme.typography.headlineSmall,
@@ -283,11 +278,11 @@ private fun RecentlySaved(filteredSavedResults: List<ResultCardModel>) {
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         } else {
-            Column(
+            LazyColumn(
                 modifier = Modifier.fillMaxWidth().padding(top = Dimens.PaddingSmall),
                 verticalArrangement = Arrangement.spacedBy(Dimens.PaddingMedium)
             ) {
-                filteredSavedResults.forEachIndexed { index, resultCard ->
+                items(filteredSavedResults) { resultCard ->
                     OriginalResultCard(resultCard)
                 }
             }
