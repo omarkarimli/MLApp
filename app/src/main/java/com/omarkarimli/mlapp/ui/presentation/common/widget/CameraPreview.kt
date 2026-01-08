@@ -16,21 +16,28 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.lifecycle.compose.LocalLifecycleOwner
+import com.omarkarimli.mlapp.R
 import java.util.concurrent.Executors
 
 @Composable
-fun CameraPreview(modifier: Modifier = Modifier, cameraSelector: CameraSelector, analyzeLive: (ImageProxy) -> Unit, graphicOverlay: @Composable () -> Unit = {}) {
+fun CameraPreview(
+    modifier: Modifier = Modifier,
+    cameraSelector: CameraSelector,
+    analyzeLive: (ImageProxy) -> Unit,
+    graphicOverlay: @Composable () -> Unit = {}
+) {
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
     val cameraExecutor = remember { Executors.newSingleThreadExecutor() }
     val cameraProviderFuture = remember { ProcessCameraProvider.getInstance(context) }
 
-    Box(
-        modifier = Modifier.fillMaxSize()
-    ) {
+    Box(modifier = Modifier.fillMaxSize()) {
         AndroidView(
             modifier = modifier,
-            factory = { ctx -> PreviewView(ctx).apply { scaleType = PreviewView.ScaleType.FIT_START } },
+            factory = { ctx -> PreviewView(ctx).apply {
+                scaleType = PreviewView.ScaleType.FIT_START
+                background = ctx.getDrawable(R.color.background)
+            } },
             update = { previewView ->
                 val cameraProvider = cameraProviderFuture.get()
                 cameraProvider.unbindAll()

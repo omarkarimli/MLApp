@@ -1,5 +1,6 @@
 package com.omarkarimli.mlapp.ui.navigation
 
+import androidx.compose.animation.AnimatedContentTransitionScope
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.slideInVertically
@@ -149,11 +150,36 @@ fun AppNavigation(mainViewModel: MainViewModel) {
     ) { paddingValues ->
         CompositionLocalProvider(LocalNavController provides navController) {
             NavHost(
+                modifier = Modifier.padding(bottom = paddingValues.calculateBottomPadding()),
                 navController = navController,
                 startDestination = Screen.Splash.route,
-                modifier = Modifier.padding(
-                    bottom = paddingValues.calculateBottomPadding()
-                )
+                enterTransition = {
+                    slideIntoContainer(
+                        towards = AnimatedContentTransitionScope.SlideDirection.Left,
+                        animationSpec = tween(500)
+                    )
+                },
+                // When leaving the current screen
+                exitTransition = {
+                    slideOutOfContainer(
+                        towards = AnimatedContentTransitionScope.SlideDirection.Left,
+                        animationSpec = tween(500)
+                    )
+                },
+                // When returning to a previous screen (Back button)
+                popEnterTransition = {
+                    slideIntoContainer(
+                        towards = AnimatedContentTransitionScope.SlideDirection.Right,
+                        animationSpec = tween(500)
+                    )
+                },
+                // When the current screen is removed (Back button)
+                popExitTransition = {
+                    slideOutOfContainer(
+                        towards = AnimatedContentTransitionScope.SlideDirection.Right,
+                        animationSpec = tween(500)
+                    )
+                }
             ) {
                 composable(Screen.Splash.route) {
                     SplashScreen()

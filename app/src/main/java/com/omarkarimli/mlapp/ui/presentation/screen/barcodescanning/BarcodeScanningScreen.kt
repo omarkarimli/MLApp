@@ -19,7 +19,6 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextOverflow
 import com.google.mlkit.vision.common.InputImage
@@ -224,7 +223,7 @@ fun BarcodeScanningScreen() {
                                         .fillMaxWidth()
                                         .weight(1f)
                                         .background(
-                                            Color.Black,
+                                            MaterialTheme.colorScheme.surface,
                                             RoundedCornerShape(Dimens.CornerRadiusMedium)
                                         ),
                                     cameraSelector = cameraSelector,
